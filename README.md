@@ -30,25 +30,37 @@ func main() {
 
 	// Register dependencies
 	c.Register("db", nil, func() any {
+		fmt.Println("db created")
 		return &DB{DSN: "example"}
 	})
 
 	c.Register("repo1", []string{"db"}, func() any {
+		fmt.Println("repo1 created using: [db]")
 		return &Repo1{
 			DB: c.Get("db").(*DB),
 		}
 	})
 
 	c.Register("repo2", []string{"db"}, func() any {
+		fmt.Println("repo2 created using: [db]")
 		return &Repo2{
 			DB: c.Get("db").(*DB),
 		}
 	})
 
 	c.Register("service", []string{"repo1", "repo2"}, func() any {
+		fmt.Println("service created using: [repo1, repo2]")
 		return &Service{
 			Repo1: c.Get("repo1").(*Repo1),
 			Repo2: c.Get("repo2").(*Repo2),
+		}
+	})
+
+	c.Register("usecase", []string{"db", "service"}, func() any {
+		fmt.Println("usecase created using: [db, service]")
+		return &UseCase{
+			DB:      c.Get("db").(*DB),
+			Service: c.Get("service").(*Service),
 		}
 	})
 
@@ -56,6 +68,8 @@ func main() {
 	if err := c.Resolve(); err != nil {
 		panic(err)
 	}
+
+	fmt.Println("resolved")
 }
 ```
 
