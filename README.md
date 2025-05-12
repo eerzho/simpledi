@@ -15,7 +15,7 @@ SimpleDI is a lightweight dependency injection container for Go applications. It
 ### Installation
 
 ```bash
-go get github.com/eerzho/simpledi
+go get github.com/eerzho/simpledi@latest
 ```
 
 ### Quick Start
@@ -32,12 +32,12 @@ func main() {
     c.Register("db", nil, func() any {
         return &DB{DSN: "example"}
     })
-    
+
     c.Register("repo", []string{"db"}, func() any {
         db := c.Get("db").(*DB)
         return &Repo{DB: db}
     })
-    
+
     c.Register("service", []string{"repo"}, func() any {
         repo := c.Get("repo").(*Repo)
         return &Service{Repo: repo}
@@ -73,4 +73,4 @@ Resolves all registered dependencies in the correct order. Returns an error if t
 
 ### License
 
-MIT License - see [LICENSE](LICENSE) file for details 
+MIT License - see [LICENSE](LICENSE) file for details

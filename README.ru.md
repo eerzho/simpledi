@@ -15,7 +15,7 @@ SimpleDI - это легковесный контейнер внедрения �
 ### Установка
 
 ```bash
-go get github.com/eerzho/simpledi
+go get github.com/eerzho/simpledi@latest
 ```
 
 ### Быстрый старт
@@ -32,12 +32,12 @@ func main() {
     c.Register("db", nil, func() any {
         return &DB{DSN: "example"}
     })
-    
+
     c.Register("repo", []string{"db"}, func() any {
         db := c.Get("db").(*DB)
         return &Repo{DB: db}
     })
-    
+
     c.Register("service", []string{"repo"}, func() any {
         repo := c.Get("repo").(*Repo)
         return &Service{Repo: repo}
