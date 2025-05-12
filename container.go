@@ -36,7 +36,7 @@ func (c *Container) Resolve() error {
 		}
 		constructor := c.constructors[name]
 		if constructor == nil {
-			return fmt.Errorf("no constructor for %s", name)
+			return fmt.Errorf("no constructor for [%s]", name)
 		}
 		c.instances[name] = constructor()
 	}
@@ -79,7 +79,7 @@ func (c *Container) sort() ([]string, error) {
 		for node := range inDegree {
 			cycles = append(cycles, node)
 		}
-		return nil, fmt.Errorf("cyclic dependency detected: %v", cycles)
+		return nil, fmt.Errorf("cyclic dependency detected %v", cycles)
 	}
 	return sorted, nil
 }
