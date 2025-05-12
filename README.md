@@ -21,32 +21,41 @@ go get github.com/eerzho/simpledi@latest
 ### Quick Start
 
 ```go
-package main
+package simpledi
 
 import "github.com/eerzho/simpledi"
 
 func main() {
-    c := simpledi.NewContainer()
+	c := simpledi.NewContainer()
 
-    // Register dependencies
-    c.Register("db", nil, func() any {
-        return &DB{DSN: "example"}
-    })
+	// Register dependencies
+	c.Register("db", nil, func() any {
+		return &DB{DSN: "example"}
+	})
 
-    c.Register("repo", []string{"db"}, func() any {
-        db := c.Get("db").(*DB)
-        return &Repo{DB: db}
-    })
+	c.Register("repo1", []string{"db"}, func() any {
+		return &Repo1{
+			DB: c.Get("db").(*DB),
+		}
+	})
 
-    c.Register("service", []string{"repo"}, func() any {
-        repo := c.Get("repo").(*Repo)
-        return &Service{Repo: repo}
-    })
+	c.Register("repo2", []string{"db"}, func() any {
+		return &Repo2{
+			DB: c.Get("db").(*DB),
+		}
+	})
 
-    // Resolve all dependencies
-    if err := c.Resolve(); err != nil {
-        panic(err)
-    }
+	c.Register("service", []string{"repo1", "repo2"}, func() any {
+		return &Service{
+			Repo1: c.Get("repo1").(*Repo1),
+			Repo2: c.Get("repo2").(*Repo2),
+		}
+	})
+
+	// Resolve all dependencies
+	if err := c.Resolve(); err != nil {
+		panic(err)
+	}
 }
 ```
 
