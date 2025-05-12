@@ -1,11 +1,13 @@
-package simpledi
+package simpledi_test
 
 import (
 	"testing"
+
+	"github.com/eerzho/simpledi"
 )
 
 func TestContainer_RegisterAndGet(t *testing.T) {
-	c := NewContainer()
+	c := simpledi.NewContainer()
 	c.Register("A", nil, func() any { return "InstanceA" })
 	err := c.Resolve()
 	if err != nil {
@@ -19,7 +21,7 @@ func TestContainer_RegisterAndGet(t *testing.T) {
 }
 
 func TestContainer_ResolveWithDependencies(t *testing.T) {
-	c := NewContainer()
+	c := simpledi.NewContainer()
 	c.Register("A", nil, func() any { return "A" })
 	c.Register("B", []string{"A"}, func() any { return "B" })
 
@@ -34,7 +36,7 @@ func TestContainer_ResolveWithDependencies(t *testing.T) {
 }
 
 func TestContainer_MissingDependency(t *testing.T) {
-	c := NewContainer()
+	c := simpledi.NewContainer()
 	c.Register("B", []string{"A"}, func() any { return "B" })
 
 	err := c.Resolve()
@@ -44,7 +46,7 @@ func TestContainer_MissingDependency(t *testing.T) {
 }
 
 func TestContainer_CyclicDependency(t *testing.T) {
-	c := NewContainer()
+	c := simpledi.NewContainer()
 	c.Register("A", []string{"B"}, func() any { return "A" })
 	c.Register("B", []string{"A"}, func() any { return "B" })
 
@@ -55,7 +57,7 @@ func TestContainer_CyclicDependency(t *testing.T) {
 }
 
 func TestContainer_ConstructorMissing(t *testing.T) {
-	c := NewContainer()
+	c := simpledi.NewContainer()
 	c.Register("A", nil, nil)
 
 	err := c.Resolve()
