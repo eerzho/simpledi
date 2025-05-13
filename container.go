@@ -3,22 +3,22 @@ package simpledi
 import "fmt"
 
 type Container struct {
-	deps         map[string][]string
-	constructors map[string]func() any
-	instances    map[string]any
+	deps      map[string][]string
+	ctors     map[string]func() any
+	instances map[string]any
 }
 
 func NewContainer() *Container {
 	return &Container{
-		deps:         make(map[string][]string),
-		constructors: make(map[string]func() any),
-		instances:    make(map[string]any),
+		deps:      make(map[string][]string),
+		ctors:     make(map[string]func() any),
+		instances: make(map[string]any),
 	}
 }
 
 func (c *Container) Register(key string, deps []string, constrcutor func() any) {
 	c.deps[key] = deps
-	c.constructors[key] = constrcutor
+	c.ctors[key] = constrcutor
 }
 
 func (c *Container) Get(key string) any {
@@ -34,7 +34,7 @@ func (c *Container) Resolve() error {
 		if _, exists := c.instances[key]; exists {
 			continue
 		}
-		constructor := c.constructors[key]
+		constructor := c.ctors[key]
 		if constructor == nil {
 			return fmt.Errorf("no constructor for [%s]", key)
 		}
@@ -55,7 +55,7 @@ func (c *Container) sort() ([]string, error) {
 			inDegree[key] = len(deps)
 		}
 		for _, subKey := range deps {
-			if _, exisits := c.constructors[subKey]; !exisits {
+			if _, exisits := c.ctors[subKey]; !exisits {
 				return nil, fmt.Errorf("missig dependency [%s] required by [%s]", subKey, key)
 			}
 			graph[subKey] = append(graph[subKey], key)
