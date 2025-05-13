@@ -3,16 +3,16 @@ package simpledi
 import "fmt"
 
 type Container struct {
-	deps      map[string][]string
-	ctors     map[string]func() any
-	instances map[string]any
+	deps  map[string][]string
+	ctors map[string]func() any
+	insts map[string]any
 }
 
 func NewContainer() *Container {
 	return &Container{
-		deps:      make(map[string][]string),
-		ctors:     make(map[string]func() any),
-		instances: make(map[string]any),
+		deps:  make(map[string][]string),
+		ctors: make(map[string]func() any),
+		insts: make(map[string]any),
 	}
 }
 
@@ -22,7 +22,7 @@ func (c *Container) Register(key string, deps []string, constrcutor func() any) 
 }
 
 func (c *Container) Get(key string) any {
-	return c.instances[key]
+	return c.insts[key]
 }
 
 func (c *Container) Resolve() error {
@@ -31,14 +31,14 @@ func (c *Container) Resolve() error {
 		return err
 	}
 	for _, key := range order {
-		if _, exists := c.instances[key]; exists {
+		if _, exists := c.insts[key]; exists {
 			continue
 		}
 		constructor := c.ctors[key]
 		if constructor == nil {
 			return fmt.Errorf("no constructor for [%s]", key)
 		}
-		c.instances[key] = constructor()
+		c.insts[key] = constructor()
 	}
 	return nil
 }
