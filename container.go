@@ -16,13 +16,13 @@ func NewContainer() *Container {
 	}
 }
 
-func (c *Container) Register(name string, deps []string, constrcutor func() any) {
-	c.dependencies[name] = deps
-	c.constructors[name] = constrcutor
+func (c *Container) Register(key string, deps []string, constrcutor func() any) {
+	c.dependencies[key] = deps
+	c.constructors[key] = constrcutor
 }
 
-func (c *Container) Get(name string) any {
-	return c.instances[name]
+func (c *Container) Get(key string) any {
+	return c.instances[key]
 }
 
 func (c *Container) Resolve() error {
@@ -30,15 +30,15 @@ func (c *Container) Resolve() error {
 	if err != nil {
 		return err
 	}
-	for _, name := range order {
-		if _, exists := c.instances[name]; exists {
+	for _, key := range order {
+		if _, exists := c.instances[key]; exists {
 			continue
 		}
-		constructor := c.constructors[name]
+		constructor := c.constructors[key]
 		if constructor == nil {
-			return fmt.Errorf("no constructor for [%s]", name)
+			return fmt.Errorf("no constructor for [%s]", key)
 		}
-		c.instances[name] = constructor()
+		c.instances[key] = constructor()
 	}
 	return nil
 }
@@ -47,30 +47,30 @@ func (c *Container) sort() ([]string, error) {
 	var queue []string
 	graph := make(map[string][]string)
 	inDegree := make(map[string]int)
-	for name, deps := range c.dependencies {
+	for key, deps := range c.dependencies {
 		count := len(deps)
 		if count == 0 {
-			queue = append(queue, name)
+			queue = append(queue, key)
 		} else {
-			inDegree[name] = len(deps)
+			inDegree[key] = len(deps)
 		}
-		for _, nb := range deps {
-			if _, exisits := c.constructors[nb]; !exisits {
-				return nil, fmt.Errorf("missig dependency [%s] required by [%s]", nb, name)
+		for _, subKey := range deps {
+			if _, exisits := c.constructors[subKey]; !exisits {
+				return nil, fmt.Errorf("missig dependency [%s] required by [%s]", subKey, key)
 			}
-			graph[nb] = append(graph[nb], name)
+			graph[subKey] = append(graph[subKey], key)
 		}
 	}
 	var sorted []string
 	for len(queue) != 0 {
-		name := queue[0]
+		key := queue[0]
 		queue = queue[1:]
-		sorted = append(sorted, name)
-		for _, nb := range graph[name] {
-			inDegree[nb]--
-			if inDegree[nb] == 0 {
-				queue = append(queue, nb)
-				delete(inDegree, nb)
+		sorted = append(sorted, key)
+		for _, subKey := range graph[key] {
+			inDegree[subKey]--
+			if inDegree[subKey] == 0 {
+				queue = append(queue, subKey)
+				delete(inDegree, subKey)
 			}
 		}
 	}
