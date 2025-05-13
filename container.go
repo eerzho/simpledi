@@ -3,21 +3,21 @@ package simpledi
 import "fmt"
 
 type Container struct {
-	dependencies map[string][]string
+	deps         map[string][]string
 	constructors map[string]func() any
 	instances    map[string]any
 }
 
 func NewContainer() *Container {
 	return &Container{
-		dependencies: make(map[string][]string),
+		deps:         make(map[string][]string),
 		constructors: make(map[string]func() any),
 		instances:    make(map[string]any),
 	}
 }
 
 func (c *Container) Register(key string, deps []string, constrcutor func() any) {
-	c.dependencies[key] = deps
+	c.deps[key] = deps
 	c.constructors[key] = constrcutor
 }
 
@@ -47,7 +47,7 @@ func (c *Container) sort() ([]string, error) {
 	var queue []string
 	graph := make(map[string][]string)
 	inDegree := make(map[string]int)
-	for key, deps := range c.dependencies {
+	for key, deps := range c.deps {
 		count := len(deps)
 		if count == 0 {
 			queue = append(queue, key)
