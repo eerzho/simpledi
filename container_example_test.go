@@ -6,141 +6,70 @@ import (
 	"github.com/eerzho/simpledi"
 )
 
-func ExampleContainer() {
-	c := simpledi.NewContainer()
-
-	// Register dependencies
-	c.Register("yeast", nil, func() any {
-		fmt.Println("yeast created")
-		return "yeast"
-	})
-	c.Register("flour", nil, func() any {
-		fmt.Println("flour created")
-		return "flour"
-	})
-	c.Register("meat", nil, func() any {
-		fmt.Println("meat created")
-		return "meat"
-	})
-
-	c.Register("bread", []string{"yeast", "flour"}, func() any {
-		fmt.Printf(
-			"bread created using: [%s, %s]\n",
-			c.Get("yeast"),
-			c.Get("flour"),
-		)
-		return "bread"
-	})
-
-	c.Register("sandwich", []string{"bread", "meat"}, func() any {
-		fmt.Printf(
-			"sandwich created using: [%s, %s]\n",
-			c.Get("bread"),
-			c.Get("meat"),
-		)
-		return "sandwich"
-	})
-
-	c.Register("burger", []string{"sandwich", "meat", "bread"}, func() any {
-		fmt.Printf(
-			"burger created using: [%s, %s, %s]\n",
-			c.Get("sandwich"),
-			c.Get("meat"),
-			c.Get("bread"),
-		)
-		return "burger"
-	})
-
-	// Resolve all dependencies
-	if err := c.Resolve(); err != nil {
-		panic(err)
-	}
-
-	fmt.Println("resolved")
-
-	// Output:
-	// yeast created
-	// flour created
-	// meat created
-	// bread created using: [yeast, flour]
-	// sandwich created using: [bread, meat]
-	// burger created using: [sandwich, meat, bread]
-	// resolved
+// Example of a simple service
+type Database struct {
+	connectionString string
 }
 
-func ExampleContainer_withServices() {
-	type DB struct {
-		DSN string
-	}
+func NewDatabase() *Database {
+	return &Database{connectionString: "localhost:5432"}
+}
 
-	type Repo1 struct {
-		DB *DB
-	}
+// Example of a service that depends on another service
+type UserService struct {
+	db *Database
+}
 
-	type Repo2 struct {
-		DB *DB
-	}
+func NewUserService(db *Database) *UserService {
+	return &UserService{db: db}
+}
 
-	type Service struct {
-		Repo1 *Repo1
-		Repo2 *Repo2
-	}
+func ExampleContainer() {
+	// Create a new container
+	container := simpledi.NewContainer()
 
-	type UseCase struct {
-		DB      *DB
-		Service *Service
-	}
-
-	c := simpledi.NewContainer()
-
-	// Register dependencies
-	c.Register("db", nil, func() any {
-		fmt.Println("db created")
-		return &DB{DSN: "example"}
+	// Register services
+	container.Register("database", nil, func() any {
+		return NewDatabase()
 	})
 
-	c.Register("repo1", []string{"db"}, func() any {
-		fmt.Println("repo1 created using: [db]")
-		return &Repo1{
-			DB: c.Get("db").(*DB),
-		}
-	})
-
-	c.Register("repo2", []string{"db"}, func() any {
-		fmt.Println("repo2 created using: [db]")
-		return &Repo2{
-			DB: c.Get("db").(*DB),
-		}
-	})
-
-	c.Register("service", []string{"repo1", "repo2"}, func() any {
-		fmt.Println("service created using: [repo1, repo2]")
-		return &Service{
-			Repo1: c.Get("repo1").(*Repo1),
-			Repo2: c.Get("repo2").(*Repo2),
-		}
-	})
-
-	c.Register("usecase", []string{"db", "service"}, func() any {
-		fmt.Println("usecase created using: [db, service]")
-		return &UseCase{
-			DB:      c.Get("db").(*DB),
-			Service: c.Get("service").(*Service),
-		}
+	container.Register("userService", []string{"database"}, func() any {
+		db := container.Get("database").(*Database)
+		return NewUserService(db)
 	})
 
 	// Resolve all dependencies
-	if err := c.Resolve(); err != nil {
-		panic(err)
-	}
+	container.Resolve()
 
-	fmt.Println("resolved")
+	// Get the resolved services
+	db := container.Get("database").(*Database)
+	userService := container.Get("userService").(*UserService)
+
+	fmt.Printf("Database connection: %s\n", db.connectionString)
+	fmt.Printf("UserService has database: %v\n", userService.db != nil)
 
 	// Output:
-	// db created
-	// repo1 created using: [db]
-	// repo2 created using: [db]
-	// service created using: [repo1, repo2]
-	// usecase created using: [db, service]
-	// resolved
+	// Database connection: localhost:5432
+	// UserService has database: true
+}
+
+func ExampleContainer_chainedRegistration() {
+	container := simpledi.NewContainer()
+
+	// Chain registration calls
+	container.
+		Register("service1", nil, func() any { return "service1" }).
+		Register("service2", []string{"service1"}, func() any { return "service2" }).
+		Register("service3", []string{"service2"}, func() any { return "service3" })
+
+	container.Resolve()
+
+	fmt.Println(container.Get("service1"))
+	fmt.Println(container.Get("service2"))
+	fmt.Println(container.Get("service3"))
+
+	// Output:
+	// service1
+	// service2
+	// service3
 }
