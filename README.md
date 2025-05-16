@@ -16,10 +16,10 @@ go get github.com/eerzho/simpledi@latest
 
 ```go
 type repo struct {
-	DSN string
+    DSN string
 }
 type service struct {
-	repo *repo
+    repo *repo
 }
 
 // create container
@@ -27,10 +27,10 @@ c := simpledi.NewContainer()
 
 // register dependencies
 c.Register("repo", nil, func() any {
-	return &repo{DSN: "example"}
+    return &repo{DSN: "example"}
 })
 c.Register("service", []string{"repo"}, func() any {
-	return &service{repo: c.Get("repo").(*repo)}
+    return &service{repo: c.Get("repo").(*repo)}
 })
 
 // resolve all dependencies
