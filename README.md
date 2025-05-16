@@ -1,99 +1,74 @@
 # SimpleDI
 
-[English](README.md) | [Русский](README.ru.md)
+[![Release](https://img.shields.io/github/release/eerzho/simpledi.svg?style=for-the-badge)](https://github.com/eerzho/simpledi/releases/latest)
+[![Software License](https://img.shields.io/github/license/eerzho/simpledi.svg?style=for-the-badge)](https://github.com/eerzho/simpledi/blob/main/LICENSE)
+[![Go docs](https://img.shields.io/badge/go-reference-blue.svg?style=for-the-badge)](https://pkg.go.dev/github.com/eerzho/simpledi)
 
-SimpleDI is a lightweight dependency injection container for Go applications. It provides a simple way to manage dependencies and their lifecycle in your application.
+A simple, zero-dependency DI container for Go — no reflection, no code generation.
 
-### Features
-
-- Simple and intuitive API
-- Dependency resolution with automatic ordering
-- Cyclic dependency detection
-- Type-safe dependency injection
-- No external dependencies
-
-### Installation
+###### Installation
 
 ```bash
 go get github.com/eerzho/simpledi@latest
 ```
 
-### Quick Start
+###### Getting started
 
 ```go
-package simpledi
-
-import "github.com/eerzho/simpledi"
-
-func main() {
-	c := simpledi.NewContainer()
-
-	// Register dependencies
-	c.Register("db", nil, func() any {
-		fmt.Println("db created")
-		return &DB{DSN: "example"}
-	})
-
-	c.Register("repo1", []string{"db"}, func() any {
-		fmt.Println("repo1 created using: [db]")
-		return &Repo1{
-			DB: c.Get("db").(*DB),
-		}
-	})
-
-	c.Register("repo2", []string{"db"}, func() any {
-		fmt.Println("repo2 created using: [db]")
-		return &Repo2{
-			DB: c.Get("db").(*DB),
-		}
-	})
-
-	c.Register("service", []string{"repo1", "repo2"}, func() any {
-		fmt.Println("service created using: [repo1, repo2]")
-		return &Service{
-			Repo1: c.Get("repo1").(*Repo1),
-			Repo2: c.Get("repo2").(*Repo2),
-		}
-	})
-
-	c.Register("usecase", []string{"db", "service"}, func() any {
-		fmt.Println("usecase created using: [db, service]")
-		return &UseCase{
-			DB:      c.Get("db").(*DB),
-			Service: c.Get("service").(*Service),
-		}
-	})
-
-	// Resolve all dependencies
-	if err := c.Resolve(); err != nil {
-		panic(err)
-	}
-
-	fmt.Println("resolved")
+type repo struct {
+	DSN string
 }
+type service struct {
+	repo *repo
+}
+
+// create container
+c := simpledi.NewContainer()
+
+// register dependencies
+c.Register("repo", nil, func() any {
+	return &repo{DSN: "example"}
+})
+c.Register("service", []string{"repo"}, func() any {
+	return &service{repo: c.Get("repo").(*repo)}
+})
+
+// resolve all dependencies
+err := c.Resolve()
 ```
 
-### API Reference
+You can see the full documentation and list of examples at [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi).
 
-#### NewContainer()
+---
 
-Creates a new dependency injection container.
+## Usage
 
-#### Register(name string, deps []string, constructor func() any)
+### Notes
 
-Registers a new dependency with the container.
-- `name`: Unique identifier for the dependency
-- `deps`: List of dependency names this component depends on
-- `constructor`: Function that creates the dependency instance
+* You can register dependencies in any order.
+* Call `Resolve` only after all registrations are done.
+* To recreate all dependencies, call `Resolve` again.
+* To override an implementation, register with the same key and call `Resolve` again.
 
-#### Get(name string) any
+### Functions
 
-Retrieves a resolved dependency instance by its name.
+* `Register`: register a dependency by key
+* `Resolve`: resolve all dependencies
+* `Get`: get a dependency by key
 
-#### Resolve() error
+### Documentation and examples
 
-Resolves all registered dependencies in the correct order. Returns an error if there are cyclic dependencies or missing dependencies.
+Examples are live in [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi)
+and also in the [example file](./container_example_test.go).
 
-### License
+## Current state
 
-MIT License - see [LICENSE](LICENSE) file for details
+`simpledi` provides the core features intended.
+
+Further improvements or new features may be introduced as good ideas come up.
+
+Suggestions and feedback are always welcome.
+
+## Stargazers over time
+
+[![Stargazers over time](https://starchart.cc/eerzho/simpledi.svg)](https://starchart.cc/eerzho/simpledi)
