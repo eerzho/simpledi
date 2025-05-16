@@ -2,10 +2,12 @@ package simpledi
 
 import (
 	"fmt"
+	"sync"
 )
 
 type topoSort struct {
 	adjacency map[string][]string
+	mu        sync.Mutex
 }
 
 func newTopoSort() *topoSort {
@@ -14,15 +16,15 @@ func newTopoSort() *topoSort {
 	}
 }
 
-func (ts *topoSort) append(node string, neighbours []string) error {
-	if _, ok := ts.adjacency[node]; ok {
-		return fmt.Errorf("node already exists")
-	}
+func (ts *topoSort) append(node string, neighbours []string) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 	ts.adjacency[node] = neighbours
-	return nil
 }
 
 func (ts *topoSort) sort() ([]string, error) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 	queue := make([]string, 0)
 	graph := make(map[string][]string)
 	inDegree := make(map[string]int)
@@ -34,7 +36,7 @@ func (ts *topoSort) sort() ([]string, error) {
 		}
 		for _, neighbour := range neighbours {
 			if _, ok := ts.adjacency[neighbour]; !ok {
-				return nil, fmt.Errorf("node [%s] not declared", neighbour)
+				return nil, fmt.Errorf("[%s] not declared", neighbour)
 			}
 			graph[neighbour] = append(graph[neighbour], node)
 		}
