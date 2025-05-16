@@ -1,186 +1,238 @@
 package simpledi_test
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/eerzho/simpledi"
 )
 
-func TestContainer_Register(t *testing.T) {
+func TestResolve_BasicDependencies(t *testing.T) {
 	c := simpledi.NewContainer()
 
-	// Test valid registration
-	c.Register("service1", nil, func() any { return "service1" })
-	c.Register("service2", []string{"service1"}, func() any { return "service2" })
-
-	// Test nil builder
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Register with nil builder should panic")
-		}
-	}()
-	c.Register("service3", nil, nil)
-}
-
-func TestContainer_Get(t *testing.T) {
-	c := simpledi.NewContainer()
-	expected := "test"
-	c.Register("test", nil, func() any { return expected })
-
-	// Test before resolution
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Get before resolution should panic")
-		}
-	}()
-	c.Get("test")
-
-	// Test after resolution
-	c.Resolve()
-	if got := c.Get("test"); got != expected {
-		t.Errorf("Get() = %v, want %v", got, expected)
-	}
-
-	// Test non-existent service
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Get non-existent service should panic")
-		}
-	}()
-	c.Get("non-existent")
-}
-
-func TestContainer_Resolve(t *testing.T) {
-	c := simpledi.NewContainer()
-
-	// Test simple resolution
-	c.Register("service1", nil, func() any { return "service1" })
-	c.Register("service2", []string{"service1"}, func() any { return "service2" })
-	c.Resolve()
-
-	if got := c.Get("service1"); got != "service1" {
-		t.Errorf("Get(service1) = %v, want %v", got, "service1")
-	}
-	if got := c.Get("service2"); got != "service2" {
-		t.Errorf("Get(service2) = %v, want %v", got, "service2")
-	}
-
-	// Test circular dependency
-	c = simpledi.NewContainer()
-	c.Register("service1", []string{"service2"}, func() any { return "service1" })
-	c.Register("service2", []string{"service1"}, func() any { return "service2" })
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Resolve with circular dependency should panic")
-		}
-	}()
-	c.Resolve()
-}
-
-func TestContainer_RegisterDuplicate(t *testing.T) {
-	c := simpledi.NewContainer()
-
-	// First registration should succeed
-	c.Register("service", nil, func() any { return "first" })
-
-	// Second registration should panic
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Register duplicate service should panic")
-		}
-	}()
-	c.Register("service", nil, func() any { return "second" })
-}
-
-func TestContainer_NonExistentDependency(t *testing.T) {
-	c := simpledi.NewContainer()
-
-	// Register service with non-existent dependency
-	c.Register("service", []string{"non-existent"}, func() any { return "service" })
-
-	// Panic should occur during resolve
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Resolve with non-existent dependency should panic")
-		}
-	}()
-	c.Resolve()
-}
-
-func TestContainer_ResolutionOrder(t *testing.T) {
-	c := simpledi.NewContainer()
-
-	// Create a chain of dependencies: service1 <- service2 <- service3
-	order := make([]string, 0)
-
-	c.Register("service1", nil, func() any {
-		order = append(order, "service1")
-		return "service1"
+	c.Register("a", nil, func() any { return "a-object" })
+	c.Register("b", nil, func() any { return "b-object" })
+	c.Register("d", []string{"a", "b"}, func() any {
+		a := c.Get("a").(string)
+		b := c.Get("b").(string)
+		return fmt.Sprintf("d-object: '%s' + '%s'", a, b)
+	})
+	c.Register("f", []string{"a", "b", "d"}, func() any {
+		a := c.Get("a").(string)
+		b := c.Get("b").(string)
+		d := c.Get("d").(string)
+		return fmt.Sprintf("f-object: '%s' + '%s' + '%s'", a, b, d)
 	})
 
-	c.Register("service2", []string{"service1"}, func() any {
-		order = append(order, "service2")
-		return "service2"
+	err := c.Resolve()
+	if err != nil {
+		t.Fatalf("got: %s, want: nil", err.Error())
+	}
+}
+
+func TestResolve_DuplicateRegistration(t *testing.T) {
+	c := simpledi.NewContainer()
+
+	c.Register("a", nil, func() any { return "a-object" })
+	c.Register("a", []string{"b"}, func() any {
+		b := c.Get("b").(string)
+		return fmt.Sprintf("a-bject: '%s'", b)
+	})
+	c.Register("b", nil, func() any { return "b-object" })
+	c.Register("d", []string{"a", "b"}, func() any {
+		a := c.Get("a").(string)
+		b := c.Get("b").(string)
+		return fmt.Sprintf("d-object: '%s' + '%s'", a, b)
+	})
+	c.Register("f", []string{"a", "b", "d"}, func() any {
+		a := c.Get("a").(string)
+		b := c.Get("b").(string)
+		d := c.Get("d").(string)
+		return fmt.Sprintf("f-object: '%s' + '%s' + '%s'", a, b, d)
 	})
 
-	c.Register("service3", []string{"service2"}, func() any {
-		order = append(order, "service3")
-		return "service3"
+	err := c.Resolve()
+	if err != nil {
+		t.Fatalf("got: %s, want: nil", err.Error())
+	}
+}
+
+func TestResolve_AnyRegistrationOrder(t *testing.T) {
+	c := simpledi.NewContainer()
+
+	c.Register("f", []string{"a", "b", "d"}, func() any {
+		a := c.Get("a").(string)
+		b := c.Get("b").(string)
+		d := c.Get("d").(string)
+		return fmt.Sprintf("f-object: '%s' + '%s' + '%s'", a, b, d)
+	})
+	c.Register("d", []string{"a", "b"}, func() any {
+		a := c.Get("a").(string)
+		b := c.Get("b").(string)
+		return fmt.Sprintf("d-object: '%s' + '%s'", a, b)
+	})
+	c.Register("b", nil, func() any { return "b-object" })
+	c.Register("a", nil, func() any { return "a-object" })
+
+	err := c.Resolve()
+	if err != nil {
+		t.Fatalf("got: %s, want: nil", err.Error())
+	}
+}
+
+func TestResolve_AnyOrderWithDuplicates(t *testing.T) {
+	c := simpledi.NewContainer()
+
+	c.Register("f", []string{"a", "b", "d"}, func() any {
+		a := c.Get("a").(string)
+		b := c.Get("b").(string)
+		d := c.Get("d").(string)
+		return fmt.Sprintf("f-object: '%s' + '%s' + '%s'", a, b, d)
+	})
+	c.Register("d", []string{"a", "b"}, func() any {
+		a := c.Get("a").(string)
+		b := c.Get("b").(string)
+		return fmt.Sprintf("d-object: '%s' + '%s'", a, b)
+	})
+	c.Register("b", nil, func() any { return "b-object" })
+	c.Register("a", []string{"b"}, func() any {
+		b := c.Get("b").(string)
+		return fmt.Sprintf("a-bject: '%s'", b)
+	})
+	c.Register("a", nil, func() any { return "a-object" })
+
+	err := c.Resolve()
+	if err != nil {
+		t.Fatalf("got: %s, want: nil", err.Error())
+	}
+}
+
+func TestResolve_BuilderIsNil(t *testing.T) {
+	c := simpledi.NewContainer()
+
+	c.Register("a", nil, nil)
+	c.Register("b", []string{"a"}, func() any { return "b-object" })
+
+	err := c.Resolve()
+	if err == nil {
+		t.Fatal("got: nil, want: error")
+	}
+	if !strings.Contains(err.Error(), "builder is nil") {
+		t.Fatalf("got: %s, want: builder is nil", err.Error())
+	}
+}
+
+func TestResolve_CyclicDependencies(t *testing.T) {
+	c := simpledi.NewContainer()
+
+	c.Register("a", []string{"b"}, func() any {
+		b := c.Get("b").(string)
+		return fmt.Sprintf("a-object: '%s'", b)
+	})
+	c.Register("b", []string{"a"}, func() any {
+		a := c.Get("a").(string)
+		return fmt.Sprintf("b-object: '%s'", a)
 	})
 
-	c.Resolve()
-
-	// Verify resolution order
-	expected := []string{"service1", "service2", "service3"}
-	if len(order) != len(expected) {
-		t.Errorf("Expected %d services to be resolved, got %d", len(expected), len(order))
+	err := c.Resolve()
+	if err == nil {
+		t.Fatal("got: nil, want: error")
 	}
-	for i, service := range expected {
-		if order[i] != service {
-			t.Errorf("Expected service %s at position %d, got %s", service, i, order[i])
-		}
+	if !strings.Contains(err.Error(), "cyclic detected") {
+		t.Fatalf("got: %s, want: cyclic detected", err.Error())
 	}
 }
 
-func TestContainer_GetBeforeResolve(t *testing.T) {
+func TestResolve_MissingDependency(t *testing.T) {
 	c := simpledi.NewContainer()
 
-	// Register a service
-	c.Register("service", nil, func() any { return "service" })
+	c.Register("a", nil, func() any { return "a-object" })
+	c.Register("b", []string{"a", "d"}, func() any {
+		a := c.Get("a").(string)
+		c := c.Get("d").(string)
+		return fmt.Sprintf("b-object: '%s' + '%s'", a, c)
+	})
 
-	// Try to get service before resolve
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Get before resolve should panic")
-		}
-	}()
-	c.Get("service")
-}
-
-func TestContainer_EmptyNeeds(t *testing.T) {
-	c := simpledi.NewContainer()
-
-	// Test with empty needs slice
-	c.Register("service", []string{}, func() any { return "service" })
-	c.Resolve()
-
-	if got := c.Get("service"); got != "service" {
-		t.Errorf("Get() = %v, want %v", got, "service")
+	err := c.Resolve()
+	if err == nil {
+		t.Fatal("got: nil, want: error")
+	}
+	if !strings.Contains(err.Error(), "not declared") {
+		t.Fatalf("got: %s, want: not declared", err.Error())
 	}
 }
 
-func TestContainer_MultipleDependencies(t *testing.T) {
+func TestGet_BeforeResolve(t *testing.T) {
 	c := simpledi.NewContainer()
 
-	// Create a service with multiple dependencies
-	c.Register("dep1", nil, func() any { return "dep1" })
-	c.Register("dep2", nil, func() any { return "dep2" })
-	c.Register("service", []string{"dep1", "dep2"}, func() any { return "service" })
+	a := c.Get("a")
+	if a != nil {
+		t.Errorf("got: %v, want: nil", a)
+	}
+}
 
-	c.Resolve()
+func TestGet_AfterResolve(t *testing.T) {
+	c := simpledi.NewContainer()
 
-	if got := c.Get("service"); got != "service" {
-		t.Errorf("Get() = %v, want %v", got, "service")
+	c.Register("a", nil, func() any { return "a-object" })
+
+	err := c.Resolve()
+	if err != nil {
+		t.Errorf("got: %s, want: nil", err.Error())
+	}
+
+	a := c.Get("a")
+	if a == nil {
+		t.Error("got: nil, want: a-object")
+	}
+}
+
+func TestRegister_UsesLastBuilder(t *testing.T) {
+	c := simpledi.NewContainer()
+
+	c.Register("a", nil, func() any { return "a-object-1" })
+	c.Register("a", nil, func() any { return "a-object-2" })
+	c.Register("a", nil, func() any { return "a-object-3" })
+
+	err := c.Resolve()
+	if err != nil {
+		t.Errorf("got: %s, want: nil", err.Error())
+	}
+
+	a := c.Get("a").(string)
+	if a != "a-object-3" {
+		t.Errorf("got: %s, want: a-object-3", a)
+	}
+}
+
+func TestRegister_EmptyKey(t *testing.T) {
+	c := simpledi.NewContainer()
+
+	c.Register("", nil, func() any { return "-object" })
+	c.Register("a", nil, func() any { return "a-object" })
+
+	err := c.Resolve()
+	if err != nil {
+		t.Errorf("got: %s, want: nil", err.Error())
+	}
+
+	empty := c.Get("")
+	if empty != "-object" {
+		t.Errorf("got: %v, want: -object", empty)
+	}
+
+	a := c.Get("a")
+	if a != "a-object" {
+		t.Errorf("got: %v, want: a-object", a)
+	}
+}
+
+func TestResolve_EmptyContainer(t *testing.T) {
+	c := simpledi.NewContainer()
+
+	err := c.Resolve()
+	if err != nil {
+		t.Errorf("got: %s, want: nil", err.Error())
 	}
 }

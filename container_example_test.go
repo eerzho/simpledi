@@ -6,70 +6,115 @@ import (
 	"github.com/eerzho/simpledi"
 )
 
-// Example of a simple service
-type Database struct {
-	connectionString string
-}
+func ExampleContainer_basic() {
+	type (
+		db struct {
+			dsn string
+		}
+		repo struct {
+			db *db
+		}
+		service struct {
+			repo *repo
+		}
+	)
 
-func NewDatabase() *Database {
-	return &Database{connectionString: "localhost:5432"}
-}
+	c := simpledi.NewContainer()
+	dsn := "example://example:example"
 
-// Example of a service that depends on another service
-type UserService struct {
-	db *Database
-}
-
-func NewUserService(db *Database) *UserService {
-	return &UserService{db: db}
-}
-
-func ExampleContainer() {
-	// Create a new container
-	container := simpledi.NewContainer()
-
-	// Register services
-	container.Register("database", nil, func() any {
-		return NewDatabase()
+	c.Register("db", nil, func() any {
+		fmt.Println("creating: db")
+		return &db{dsn: dsn}
+	})
+	c.Register("repo", []string{"db"}, func() any {
+		fmt.Println("creating: repo")
+		db := c.Get("db").(*db)
+		return &repo{db: db}
+	})
+	c.Register("service", []string{"repo"}, func() any {
+		fmt.Println("creating: service")
+		repo := c.Get("repo").(*repo)
+		return &service{repo: repo}
 	})
 
-	container.Register("userService", []string{"database"}, func() any {
-		db := container.Get("database").(*Database)
-		return NewUserService(db)
-	})
+	c.Resolve()
 
-	// Resolve all dependencies
-	container.Resolve()
-
-	// Get the resolved services
-	db := container.Get("database").(*Database)
-	userService := container.Get("userService").(*UserService)
-
-	fmt.Printf("Database connection: %s\n", db.connectionString)
-	fmt.Printf("UserService has database: %v\n", userService.db != nil)
+	fmt.Println(c.Get("service").(*service).repo.db.dsn)
 
 	// Output:
-	// Database connection: localhost:5432
-	// UserService has database: true
+	// creating: db
+	// creating: repo
+	// creating: service
+	// example://example:example
 }
 
-func ExampleContainer_chainedRegistration() {
-	container := simpledi.NewContainer()
+func ExampleContainer_complex() {
+	type (
+		db struct {
+			dsn string
+		}
+		repo1 struct {
+			db *db
+		}
+		repo2 struct {
+			db *db
+		}
+		repo3 struct {
+			db *db
+		}
+		service1 struct {
+			repo1 *repo1
+			repo2 *repo2
+		}
+		service2 struct {
+			service1 *service1
+			repo3    *repo3
+		}
+	)
 
-	// Chain registration calls
-	container.
-		Register("service1", nil, func() any { return "service1" }).
-		Register("service2", []string{"service1"}, func() any { return "service2" }).
-		Register("service3", []string{"service2"}, func() any { return "service3" })
+	c := simpledi.NewContainer()
+	dsn := "example://example:example"
 
-	container.Resolve()
+	c.Register("db", nil, func() any {
+		fmt.Println("creating: db")
+		return &db{dsn: dsn}
+	})
+	c.Register("repo1", []string{"db"}, func() any {
+		db := c.Get("db").(*db)
+		return &repo1{db: db}
+	})
+	c.Register("repo2", []string{"db"}, func() any {
+		db := c.Get("db").(*db)
+		return &repo2{db: db}
+	})
+	c.Register("repo3", []string{"db"}, func() any {
+		db := c.Get("db").(*db)
+		return &repo3{db: db}
+	})
+	c.Register("service1", []string{"repo1", "repo2"}, func() any {
+		fmt.Println("creating: service1")
+		repo1 := c.Get("repo1").(*repo1)
+		repo2 := c.Get("repo2").(*repo2)
+		return &service1{repo1: repo1, repo2: repo2}
+	})
+	c.Register("service2", []string{"service1", "repo3"}, func() any {
+		fmt.Println("creating: service2")
+		service1 := c.Get("service1").(*service1)
+		repo3 := c.Get("repo3").(*repo3)
+		return &service2{service1: service1, repo3: repo3}
+	})
 
-	fmt.Println(container.Get("service1"))
-	fmt.Println(container.Get("service2"))
-	fmt.Println(container.Get("service3"))
+	c.Resolve()
+
+	fmt.Println(c.Get("service2").(*service2).service1.repo1.db.dsn)
+	fmt.Println(c.Get("service2").(*service2).service1.repo2.db.dsn)
+	fmt.Println(c.Get("service2").(*service2).repo3.db.dsn)
 
 	// Output:
-	// service1
-	// service2
-	// service3
+	// creating: db
+	// creating: service1
+	// creating: service2
+	// example://example:example
+	// example://example:example
+	// example://example:example
 }
