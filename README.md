@@ -51,7 +51,7 @@ You can see the full documentation and list of examples at [pkg.go.dev](https://
 * To override an implementation, register with the same key and call `Resolve` again.
 
 ### Functions
-
+* `NewContainer`: creates and returns a new DI container
 * `Register`: register a dependency by key
 * `Resolve`: resolve all dependencies
 * `Get`: get a dependency by key
