@@ -11,8 +11,8 @@ import (
 type Container struct {
 	ts       *topoSort
 	mu       sync.RWMutex
-	objects  map[string]any        // stores created instances by key
-	builders map[string]func() any // stores constructors by key
+	objects  map[string]any
+	builders map[string]func() any
 }
 
 // Creates and returns a new DI container.
