@@ -22,19 +22,16 @@ type service struct {
     repo *repo
 }
 
-// create container
-c := simpledi.NewContainer()
-
 // register dependencies
-c.Register("repo", nil, func() any {
+simpledi.Register("repo", nil, func() any {
     return &repo{DSN: "example"}
 })
-c.Register("service", []string{"repo"}, func() any {
-    return &service{repo: c.Get("repo").(*repo)}
+simpledi.Register("service", []string{"repo"}, func() any {
+    return &service{repo: simpledi.Get("repo").(*repo)}
 })
 
 // resolve all dependencies
-err := c.Resolve()
+err := simpledi.Resolve()
 ```
 
 You can see the full documentation and list of examples at [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi).
