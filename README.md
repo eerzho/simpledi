@@ -56,7 +56,7 @@ You can see the full documentation and list of examples at [pkg.go.dev](https://
 ### Documentation and examples
 
 Examples are live in [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi)
-and also in the [example file](./example_test.go).
+and also in the [example file](./container_example_test.go).
 
 ## Current state
 
