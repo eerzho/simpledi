@@ -71,4 +71,4 @@ Suggestions and feedback are always welcome.
 
 ## Stargazers over time
 
-[![Stargazers over time](https://starchart.cc/eerzho/simpledi.svg)](https://starchart.cc/eerzho/simpledi)
+[![Stargazers over time](https://starchart.cc/eerzho/simpledi.svg?background=%23FFFFFF&axis=%23333333&line=%236b63ff)](https://starchart.cc/eerzho/simpledi)
