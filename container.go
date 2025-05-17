@@ -1,23 +1,4 @@
 // A simple dependency injection container for Go — zero dependencies, no reflection, no code generation.
-//
-// Example:
-//
-//		type repo struct {
-//		    DSN string
-//		}
-//		type service struct {
-//		    repo *repo
-//		}
-//	 	c := simpledi.NewContainer()
-//		c.Register("repo", nil, func() any {
-//		    return &repo{DSN: "example"}
-//		})
-//		c.Register("service", []string{"repo"}, func() any {
-//		    return &service{repo: c.Get("repo").(*repo)}
-//		})
-//		err := c.Resolve()
-//
-// Check the examples and README for more detailed usage.
 package simpledi
 
 import (
