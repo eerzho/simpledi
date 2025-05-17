@@ -1,8 +1,9 @@
 # SimpleDI
 
-[![Release](https://img.shields.io/github/release/eerzho/simpledi.svg?style=for-the-badge)](https://github.com/eerzho/simpledi/releases/latest)
-[![Software License](https://img.shields.io/github/license/eerzho/simpledi.svg?style=for-the-badge)](https://github.com/eerzho/simpledi/blob/main/LICENSE)
-[![Go docs](https://img.shields.io/badge/go-reference-blue.svg?style=for-the-badge)](https://pkg.go.dev/github.com/eerzho/simpledi)
+[![Release](https://img.shields.io/github/release/eerzho/simpledi.svg)](https://github.com/eerzho/simpledi/releases/latest)
+[![License](https://img.shields.io/github/license/eerzho/simpledi.svg)](https://github.com/eerzho/simpledi/blob/main/LICENSE)
+[![Go Reference](https://img.shields.io/badge/go-reference-blue.svg)](https://pkg.go.dev/github.com/eerzho/simpledi)
+[![Go Report](https://goreportcard.com/badge/github.com/eerzho/simpledi)](https://goreportcard.com/report/github.com/eerzho/simpledi)
 
 A simple dependency injection container for Go — zero dependencies, no reflection, no code generation.
 
