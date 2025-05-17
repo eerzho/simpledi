@@ -4,12 +4,12 @@
 [![Software License](https://img.shields.io/github/license/eerzho/simpledi.svg?style=for-the-badge)](https://github.com/eerzho/simpledi/blob/main/LICENSE)
 [![Go docs](https://img.shields.io/badge/go-reference-blue.svg?style=for-the-badge)](https://pkg.go.dev/github.com/eerzho/simpledi)
 
-A simple, zero-dependency DI container for Go — no reflection, no code generation.
+A simple dependency injection container for Go — zero dependencies, no reflection, no code generation.
 
 ###### Installation
 
 ```bash
-go get github.com/eerzho/simpledi@latest
+go get github.com/eerzho/simpledi
 ```
 
 ###### Getting started
