@@ -6,7 +6,6 @@ import (
 	"github.com/eerzho/simpledi"
 )
 
-// Basic package usage example.
 func Example() {
 	type repo struct {
 		DSN string
@@ -123,4 +122,35 @@ func Example_overrideDependency() {
 	// creating mock
 	// creating service
 	// mock-example
+}
+
+func Example_defaultContainer() {
+	type repo struct {
+		DSN string
+	}
+	type service struct {
+		repo *repo
+	}
+
+	// register dependencies
+	simpledi.Register("repo", nil, func() any {
+		fmt.Println("creating repo")
+		return &repo{DSN: "example"}
+	})
+	simpledi.Register("service", []string{"repo"}, func() any {
+		fmt.Println("creating service")
+		return &service{repo: simpledi.Get("repo").(*repo)}
+	})
+
+	// resolve all dependencies
+	simpledi.Resolve()
+
+	// get resolved dependency
+	s := simpledi.Get("service").(*service)
+	fmt.Println(s.repo.DSN)
+
+	// Output:
+	// creating repo
+	// creating service
+	// example
 }
