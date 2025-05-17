@@ -1,3 +1,30 @@
+// A simple dependency injection container for Go — zero dependencies, no reflection, no code generation.
+//
+// Example:
+//
+//	type repo struct {
+//	    DSN string
+//	}
+//	type service struct {
+//	    repo *repo
+//	}
+//
+// // create container
+// c := simpledi.NewContainer()
+//
+// // register dependencies
+//
+//	c.Register("repo", nil, func() any {
+//	    return &repo{DSN: "example"}
+//	})
+//	c.Register("service", []string{"repo"}, func() any {
+//	    return &service{repo: c.Get("repo").(*repo)}
+//	})
+//
+// // resolve all dependencies
+// err := c.Resolve()
+//
+// Check the examples and README for more detailed usage.
 package simpledi
 
 import (
@@ -5,6 +32,8 @@ import (
 	"sync"
 )
 
+// DI Container that stores created objects.
+// Dependency resolution is based on topological sorting.
 type Container struct {
 	ts       *topoSort
 	mu       sync.RWMutex
@@ -12,6 +41,7 @@ type Container struct {
 	builders map[string]func() any
 }
 
+// Creates and returns a new DI container.
 func NewContainer() *Container {
 	return &Container{
 		ts:       newTopoSort(),
@@ -20,6 +50,10 @@ func NewContainer() *Container {
 	}
 }
 
+// Register a dependency by key
+// key:     unique name for the dependency
+// needs:   list of dependency keys this object depends on
+// builder: function that returns the object instance
 func (c *Container) Register(key string, needs []string, builder func() any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -27,12 +61,15 @@ func (c *Container) Register(key string, needs []string, builder func() any) {
 	c.builders[key] = builder
 }
 
+// Get a dependency by key
+// key: unique name of the dependency
 func (c *Container) Get(key string) any {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.objects[key]
 }
 
+// Resolve all dependencies
 func (c *Container) Resolve() error {
 	sorted, err := c.ts.sort()
 	if err != nil {
