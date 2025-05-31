@@ -1,4 +1,5 @@
-// A simple dependency injection container for Go — zero dependencies, no reflection, no code generation.
+// Package simpledi provides a simple dependency injection container for Go.
+// Zero dependencies, no reflection, no code generation.
 package simpledi
 
 import (
@@ -6,58 +7,122 @@ import (
 	"sync"
 )
 
-// DI Container that stores created objects.
+// Container is a DI container that stores created objects.
 // Dependency resolution is based on topological sorting.
 type Container struct {
-	ts       *topoSort
-	mu       sync.RWMutex
-	objects  map[string]any
-	builders map[string]func() any
+	mu           sync.Mutex
+	resolved     bool
+	objects      map[string]any
+	builders     map[string]func() any
+	dependencies map[string][]string
 }
 
-// Creates and returns a new DI container.
+// NewContainer creates and returns a new DI container.
 func NewContainer() *Container {
 	return &Container{
-		ts:       newTopoSort(),
-		objects:  make(map[string]any),
-		builders: make(map[string]func() any),
+		objects:      make(map[string]any),
+		builders:     make(map[string]func() any),
+		dependencies: make(map[string][]string),
 	}
 }
 
-// Register a dependency by key
-//   - key:     unique name for the dependency
-//   - needs:   list of dependency keys this object depends on
+// Register registers a dependency by key.
+//   - key: unique name for the dependency
+//   - deps: list of dependency keys this object depends on
 //   - builder: function that returns the object instance
-func (c *Container) Register(key string, needs []string, builder func() any) {
+func (c *Container) Register(key string, deps []string, builder func() any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.ts.append(key, needs)
+	c.dependencies[key] = deps
 	c.builders[key] = builder
+	c.resolved = false
 }
 
-// Get a dependency by key
-//   - key: unique name of the dependency
+// Get retrieves a dependency by key.
 func (c *Container) Get(key string) any {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	return c.objects[key]
 }
 
-// Resolve all dependencies
+// Resolve resolves all dependencies.
 func (c *Container) Resolve() error {
-	sorted, err := c.ts.sort()
+	if c.resolved {
+		return nil
+	}
+	sorted, err := c.sort()
 	if err != nil {
 		return err
 	}
-	for _, key := range sorted {
+	if err := c.build(sorted); err != nil {
+		return err
+	}
+	c.resolved = true
+	return nil
+}
+
+func (c *Container) sort() ([]string, error) {
+	depsCount := len(c.dependencies)
+	if depsCount == 0 {
+		return nil, nil
+	}
+	inDegree := make(map[string]int, depsCount)
+	for key := range c.dependencies {
+		inDegree[key] = 0
+	}
+	for key, deps := range c.dependencies {
+		for _, dep := range deps {
+			if _, exists := c.dependencies[dep]; !exists {
+				return nil, fmt.Errorf("[%s] not declared", dep)
+			}
+			inDegree[key]++
+		}
+	}
+	queue := make([]string, 0, depsCount)
+	for key, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, key)
+		}
+	}
+	sorted := make([]string, 0, depsCount)
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		sorted = append(sorted, current)
+		for key, deps := range c.dependencies {
+			for _, dep := range deps {
+				if dep == current {
+					inDegree[key]--
+					if inDegree[key] == 0 {
+						queue = append(queue, key)
+					}
+					break
+				}
+			}
+		}
+	}
+	sortedCount := len(sorted)
+	if sortedCount != depsCount {
+		cycles := make([]string, 0, depsCount-sortedCount)
+		for key, degree := range inDegree {
+			if degree > 0 {
+				cycles = append(cycles, key)
+			}
+		}
+		return nil, fmt.Errorf("cyclic detected: %v", cycles)
+	}
+	return sorted, nil
+}
+
+func (c *Container) build(keys []string) error {
+	for _, key := range keys {
+		c.mu.Lock()
 		builder := c.builders[key]
+		c.mu.Unlock()
 		if builder == nil {
 			return fmt.Errorf("[%s] builder is nil", key)
 		}
-		object := builder()
-		c.mu.Lock()
-		c.objects[key] = object
-		c.mu.Unlock()
+		c.objects[key] = builder()
 	}
 	return nil
 }
