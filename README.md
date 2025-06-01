@@ -29,11 +29,9 @@ c := simpledi.NewContainer()
 
 // register dependencies
 c.Register("repo", nil, func() any {
-	fmt.Println("creating repo")
 	return &repo{dsn: "example"}
 })
 c.Register("service", []string{"repo"}, func() any {
-	fmt.Println("creating service")
 	return &service{repo: c.Get("repo").(*repo)}
 })
 
