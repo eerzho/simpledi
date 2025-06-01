@@ -17,28 +17,28 @@ go get github.com/eerzho/simpledi
 ###### Getting started
 
 ```go
-	type repo struct {
-		dsn string
-	}
-	type service struct {
-		repo *repo
-	}
+type repo struct {
+	dsn string
+}
+type service struct {
+	repo *repo
+}
 
-	// create container
-	c := simpledi.NewContainer()
+// create container
+c := simpledi.NewContainer()
 
-	// register dependencies
-	c.Register("repo", nil, func() any {
-		fmt.Println("creating repo")
-		return &repo{dsn: "example"}
-	})
-	c.Register("service", []string{"repo"}, func() any {
-		fmt.Println("creating service")
-		return &service{repo: c.Get("repo").(*repo)}
-	})
+// register dependencies
+c.Register("repo", nil, func() any {
+	fmt.Println("creating repo")
+	return &repo{dsn: "example"}
+})
+c.Register("service", []string{"repo"}, func() any {
+	fmt.Println("creating service")
+	return &service{repo: c.Get("repo").(*repo)}
+})
 
-	// resolve all dependencies
-	c.Resolve()
+// resolve all dependencies
+c.Resolve()
 ```
 
 You can see the full documentation and list of examples at [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi).
