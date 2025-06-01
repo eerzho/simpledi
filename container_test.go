@@ -50,38 +50,41 @@ func TestResolveWhenEmptyContainer(t *testing.T) {
 }
 
 func TestResolveWhenKeyNotDeclared(t *testing.T) {
+	want := "not declared"
 	c := simpledi.NewContainer()
 	c.Register("b", []string{"a"}, func() any { return "b" })
 	err := c.Resolve()
 	if err == nil {
-		t.Fatal("got: err - nil, want: err - not declared")
+		t.Fatalf("got: err - nil, want: err - %s", want)
 	}
-	if !strings.Contains(err.Error(), "not declared") {
-		t.Fatalf("got: err - %s, want: err - not declared", err.Error())
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("got: err - %s, want: err - %s", err.Error(), want)
 	}
 }
 
 func TestResolveWhenCyclicDetected(t *testing.T) {
+	want := "cyclic detected"
 	c := simpledi.NewContainer()
 	c.Register("a", []string{"b"}, func() any { return "a" })
 	c.Register("b", []string{"a"}, func() any { return "b" })
 	err := c.Resolve()
 	if err == nil {
-		t.Fatal("got: err - nil, want: err - cyclic detected")
+		t.Fatalf("got: err - nil, want: err - %s", want)
 	}
-	if !strings.Contains(err.Error(), "cyclic detected") {
-		t.Fatalf("got: err - %s, want: err - cyclic detected", err.Error())
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("got: err - %s, want: err - %s", err.Error(), want)
 	}
 }
 
 func TestResolveWhenBuilderIsNil(t *testing.T) {
+	want := "builder is nil"
 	c := simpledi.NewContainer()
 	c.Register("a", nil, nil)
 	err := c.Resolve()
 	if err == nil {
-		t.Fatal("got: err - nil, want: err - builder is nil")
+		t.Fatalf("got: err - nil, want: err - %s", want)
 	}
-	if !strings.Contains(err.Error(), "builder is nil") {
-		t.Fatalf("got: err - %s, want: err - builder is nil", err.Error())
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("got: err - %s, want: err - %s", err.Error(), want)
 	}
 }
