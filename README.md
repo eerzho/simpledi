@@ -4,6 +4,7 @@
 [![License](https://img.shields.io/github/license/eerzho/simpledi.svg)](https://github.com/eerzho/simpledi/blob/main/LICENSE)
 [![Go Reference](https://img.shields.io/badge/go-reference-blue.svg)](https://pkg.go.dev/github.com/eerzho/simpledi)
 [![Go Report](https://goreportcard.com/badge/github.com/eerzho/simpledi)](https://goreportcard.com/report/github.com/eerzho/simpledi)
+[![Codecov](https://codecov.io/gh/eerzho/simpledi/branch/main/graph/badge.svg)](https://codecov.io/gh/eerzho/simpledi)
 
 A simple dependency injection container for Go — zero dependencies, no reflection, no code generation.
 
