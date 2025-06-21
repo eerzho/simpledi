@@ -71,9 +71,9 @@ Further improvements or new features may be introduced as good ideas come up.
 
 Suggestions and feedback are always welcome.
 
-## Stargazers over time
+## Star History
 
-[![Stargazers over time](https://starchart.cc/eerzho/simpledi.svg?background=%23FFFFFF&axis=%23333333&line=%236b63ff)](https://starchart.cc/eerzho/simpledi)
+[![Star History Chart](https://api.star-history.com/svg?repos=eerzho/simpledi&type=Date)](https://www.star-history.com/#eerzho/simpledi&Date)
 
 ## Alternatives
 
