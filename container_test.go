@@ -88,3 +88,26 @@ func TestResolveWhenBuilderIsNil(t *testing.T) {
 		t.Fatalf("got: err - %s, want: err - %s", err.Error(), want)
 	}
 }
+
+func TestMustGet(t *testing.T) {
+	c := simpledi.NewContainer()
+	c.Register("a", nil, func() any { return "a" })
+	c.Resolve()
+
+	if c.MustGet("a") != "a" {
+		t.Fatalf("got: %s, want: a-value", c.MustGet("a"))
+	}
+}
+
+func TestMustGetPanic(t *testing.T) {
+	c := simpledi.NewContainer()
+	c.Resolve()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("got: no panic, want: panic")
+		}
+	}()
+
+	c.MustGet("nonexistent")
+}
