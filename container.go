@@ -39,10 +39,20 @@ func (c *Container) Register(key string, deps []string, builder func() any) {
 }
 
 // Get retrieves a dependency by key.
-func (c *Container) Get(key string) any {
+func (c *Container) Get(key string) (any, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.objects[key]
+	object, ok := c.objects[key]
+	return object, ok
+}
+
+// MustGet retrieves a dependency by key or panics if not found.
+func (c *Container) MustGet(key string) any {
+	object, ok := c.Get(key)
+	if !ok {
+		panic(fmt.Sprintf("dependency [%s] not found", key))
+	}
+	return object
 }
 
 // Resolve resolves all dependencies.

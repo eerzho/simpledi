@@ -17,8 +17,14 @@ func Register(key string, needs []string, builder func() any) {
 
 // Get a dependency by key
 //   - key: unique name of the dependency
-func Get(key string) any {
+func Get(key string) (any, bool) {
 	return defaultC().Get(key)
+}
+
+// MustGet retrieves a dependency by key or panics if not found
+//   - key: unique name of the dependency
+func MustGet(key string) any {
+	return defaultC().MustGet(key)
 }
 
 // Resolve all dependencies

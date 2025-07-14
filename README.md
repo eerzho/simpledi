@@ -57,6 +57,7 @@ You can see the full documentation and list of examples at [pkg.go.dev](https://
 * `Register`: register a dependency by key
 * `Resolve`: resolve all dependencies
 * `Get`: get a dependency by key
+* `MustGet`: get a dependency by key or panic if not found
 
 ### Documentation and examples
 
