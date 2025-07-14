@@ -64,7 +64,7 @@ func BenchmarkWithRealisticDeps(b *testing.B) {
 		c := simpledi.NewContainer()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
-			deps := []string{}
+			var deps []string
 			if j < 100 {
 				deps = nil
 			} else if j < 500 {
