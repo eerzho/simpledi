@@ -25,7 +25,7 @@ func Example() {
 		return &service{repo: c.MustGet("repo").(*repo)}
 	})
 	// resolve all dependencies
-	c.Resolve()
+	c.MustResolve()
 	// get resolved dependency
 	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// Output:
@@ -51,7 +51,7 @@ func Example_defaultContainer() {
 		return &service{repo: simpledi.MustGetAs[*repo]("repo")}
 	})
 	// resolve all dependencies
-	simpledi.Resolve()
+	simpledi.MustResolve()
 	// get resolved dependency
 	fmt.Println(simpledi.MustGetAs[*service]("service").repo.dsn)
 	// Output:
@@ -79,7 +79,7 @@ func Example_registerInAnyOrder() {
 		return &repo{dsn: "example"}
 	})
 	// resolve all dependencies
-	c.Resolve()
+	c.MustResolve()
 	// get resolved dependency
 	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// Output:
@@ -107,7 +107,7 @@ func Example_overrideDependency() {
 		return &service{repo: c.MustGet("repo").(*repo)}
 	})
 	// resolve all dependencies
-	c.Resolve()
+	c.MustResolve()
 	// get resolved dependency
 	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// override the "repo"
@@ -116,7 +116,7 @@ func Example_overrideDependency() {
 		return &repo{dsn: "example-2"}
 	})
 	// resolve all dependencies again
-	c.Resolve()
+	c.MustResolve()
 	// get resolved dependency
 	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// Output:
