@@ -48,12 +48,12 @@ func Example_defaultContainer() {
 	})
 	simpledi.Register("service", []string{"repo"}, func() any {
 		fmt.Println("creating service")
-		return &service{repo: simpledi.MustGet("repo").(*repo)}
+		return &service{repo: simpledi.MustGetAs[*repo]("repo")}
 	})
 	// resolve all dependencies
 	simpledi.Resolve()
 	// get resolved dependency
-	fmt.Println(simpledi.MustGet("service").(*service).repo.dsn)
+	fmt.Println(simpledi.MustGetAs[*service]("service").repo.dsn)
 	// Output:
 	// creating repo
 	// creating service
