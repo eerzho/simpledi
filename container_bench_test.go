@@ -22,7 +22,7 @@ func Benchmark(b *testing.B) {
 				},
 			)
 		}
-		c.Resolve()
+		c.MustResolve()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
 			v := c.MustGet(key)
@@ -48,7 +48,7 @@ func BenchmarkWithDeps(b *testing.B) {
 			)
 			prevKeys = append(prevKeys, key)
 		}
-		c.Resolve()
+		c.MustResolve()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
 			v := c.MustGet(key)
@@ -86,7 +86,7 @@ func BenchmarkWithRealisticDeps(b *testing.B) {
 				},
 			)
 		}
-		c.Resolve()
+		c.MustResolve()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
 			v := c.MustGet(key)
