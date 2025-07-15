@@ -25,7 +25,7 @@ func Benchmark(b *testing.B) {
 		c.Resolve()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
-			v := c.Get(key)
+			v := c.MustGet(key)
 			_ = v
 		}
 	}
@@ -51,7 +51,7 @@ func BenchmarkWithDeps(b *testing.B) {
 		c.Resolve()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
-			v := c.Get(key)
+			v := c.MustGet(key)
 			_ = v
 		}
 	}
@@ -64,7 +64,7 @@ func BenchmarkWithRealisticDeps(b *testing.B) {
 		c := simpledi.NewContainer()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
-			deps := []string{}
+			var deps []string
 			if j < 100 {
 				deps = nil
 			} else if j < 500 {
@@ -89,7 +89,7 @@ func BenchmarkWithRealisticDeps(b *testing.B) {
 		c.Resolve()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
-			v := c.Get(key)
+			v := c.MustGet(key)
 			_ = v
 		}
 	}

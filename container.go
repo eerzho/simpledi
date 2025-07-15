@@ -17,7 +17,7 @@ type Container struct {
 	dependencies map[string][]string
 }
 
-// NewContainer creates and returns a new DI container.
+// NewContainer creates a new DI container.
 func NewContainer() *Container {
 	return &Container{
 		objects:      make(map[string]any),
@@ -26,9 +26,9 @@ func NewContainer() *Container {
 	}
 }
 
-// Register registers a dependency by key.
-//   - key: unique name for the dependency
-//   - deps: list of dependency keys this object depends on
+// Register a dependency by key
+//   - key:     unique name for the dependency
+//   - needs:   list of dependency keys this object depends on
 //   - builder: function that returns the object instance
 func (c *Container) Register(key string, deps []string, builder func() any) {
 	c.mu.Lock()
@@ -38,14 +38,26 @@ func (c *Container) Register(key string, deps []string, builder func() any) {
 	c.resolved = false
 }
 
-// Get retrieves a dependency by key.
-func (c *Container) Get(key string) any {
+// Get a dependency by key
+//   - key: unique name of the dependency
+func (c *Container) Get(key string) (any, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.objects[key]
+	object, ok := c.objects[key]
+	return object, ok
 }
 
-// Resolve resolves all dependencies.
+// Get a dependency by key or panics
+//   - key: unique name of the dependency
+func (c *Container) MustGet(key string) any {
+	object, ok := c.Get(key)
+	if !ok {
+		panic(fmt.Sprintf("dependency [%s] not found", key))
+	}
+	return object
+}
+
+// Resolve all dependencies
 func (c *Container) Resolve() error {
 	if c.resolved {
 		return nil

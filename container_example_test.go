@@ -22,13 +22,12 @@ func Example() {
 	})
 	c.Register("service", []string{"repo"}, func() any {
 		fmt.Println("creating service")
-		return &service{repo: c.Get("repo").(*repo)}
+		return &service{repo: c.MustGet("repo").(*repo)}
 	})
 	// resolve all dependencies
 	c.Resolve()
 	// get resolved dependency
-	s := c.Get("service").(*service)
-	fmt.Println(s.repo.dsn)
+	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// Output:
 	// creating repo
 	// creating service
@@ -49,13 +48,12 @@ func Example_defaultContainer() {
 	})
 	simpledi.Register("service", []string{"repo"}, func() any {
 		fmt.Println("creating service")
-		return &service{repo: simpledi.Get("repo").(*repo)}
+		return &service{repo: simpledi.MustGetAs[*repo]("repo")}
 	})
 	// resolve all dependencies
 	simpledi.Resolve()
 	// get resolved dependency
-	s := simpledi.Get("service").(*service)
-	fmt.Println(s.repo.dsn)
+	fmt.Println(simpledi.MustGetAs[*service]("service").repo.dsn)
 	// Output:
 	// creating repo
 	// creating service
@@ -74,7 +72,7 @@ func Example_registerInAnyOrder() {
 	// register dependencies in any order
 	c.Register("service", []string{"repo"}, func() any {
 		fmt.Println("creating service")
-		return &service{repo: c.Get("repo").(*repo)}
+		return &service{repo: c.MustGet("repo").(*repo)}
 	})
 	c.Register("repo", nil, func() any {
 		fmt.Println("creating repo")
@@ -83,8 +81,7 @@ func Example_registerInAnyOrder() {
 	// resolve all dependencies
 	c.Resolve()
 	// get resolved dependency
-	s := c.Get("service").(*service)
-	fmt.Println(s.repo.dsn)
+	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// Output:
 	// creating repo
 	// creating service
@@ -107,13 +104,12 @@ func Example_overrideDependency() {
 	})
 	c.Register("service", []string{"repo"}, func() any {
 		fmt.Println("creating service")
-		return &service{repo: c.Get("repo").(*repo)}
+		return &service{repo: c.MustGet("repo").(*repo)}
 	})
 	// resolve all dependencies
 	c.Resolve()
 	// get resolved dependency
-	s := c.Get("service").(*service)
-	fmt.Println(s.repo.dsn)
+	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// override the "repo"
 	c.Register("repo", nil, func() any {
 		fmt.Println("creating mock")
@@ -122,8 +118,7 @@ func Example_overrideDependency() {
 	// resolve all dependencies again
 	c.Resolve()
 	// get resolved dependency
-	s = c.Get("service").(*service)
-	fmt.Println(s.repo.dsn)
+	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// Output:
 	// creating repo
 	// creating service
