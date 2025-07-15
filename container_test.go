@@ -94,8 +94,9 @@ func TestMustGet(t *testing.T) {
 	c.Register("a", nil, func() any { return "a" })
 	c.Resolve()
 
-	if c.MustGet("a") != "a" {
-		t.Fatalf("got: %s, want: a-value", c.MustGet("a"))
+	a := c.MustGet("a")
+	if a != "a" {
+		t.Fatalf("got: %s, want: a", a)
 	}
 }
 
@@ -110,4 +111,50 @@ func TestMustGetPanic(t *testing.T) {
 	}()
 
 	c.MustGet("nonexistent")
+}
+
+func TestGetAs(t *testing.T) {
+	simpledi.Register("a", nil, func() any { return "a" })
+	simpledi.Resolve()
+
+	a, ok := simpledi.GetAs[string]("a")
+	if !ok {
+		t.Fatalf("got: false, want: true")
+	}
+	if a != "a" {
+		t.Fatalf("got: %s, want: a", a)
+	}
+}
+
+func TestGetAsFail(t *testing.T) {
+	simpledi.Register("a", nil, func() any { return "a" })
+	simpledi.Resolve()
+
+	_, ok := simpledi.GetAs[int]("a")
+	if ok {
+		t.Fatalf("got: true, want: false")
+	}
+}
+
+func TestMustGetAs(t *testing.T) {
+	simpledi.Register("a", nil, func() any { return "a" })
+	simpledi.Resolve()
+
+	a := simpledi.MustGetAs[string]("a")
+	if a != "a" {
+		t.Fatalf("got: %s, want: a", a)
+	}
+}
+
+func TestMustGetAsPanic(t *testing.T) {
+	simpledi.Register("a", nil, func() any { return "a" })
+	simpledi.Resolve()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("got: no panic, want: panic")
+		}
+	}()
+
+	simpledi.MustGetAs[int]("a")
 }
