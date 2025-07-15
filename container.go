@@ -26,7 +26,7 @@ func NewContainer() *Container {
 	}
 }
 
-// Register a dependency by key
+// Register a dependency by key.
 //   - key:     unique name for the dependency
 //   - needs:   list of dependency keys this object depends on
 //   - builder: function that returns the object instance
@@ -38,7 +38,7 @@ func (c *Container) Register(key string, deps []string, builder func() any) {
 	c.resolved = false
 }
 
-// Get a dependency by key
+// Get a dependency by key.
 //   - key: unique name of the dependency
 func (c *Container) Get(key string) (any, bool) {
 	c.mu.Lock()
@@ -47,7 +47,7 @@ func (c *Container) Get(key string) (any, bool) {
 	return object, ok
 }
 
-// Get a dependency by key or panics
+// Get a dependency by key or panics.
 //   - key: unique name of the dependency
 func (c *Container) MustGet(key string) any {
 	object, ok := c.Get(key)
@@ -57,7 +57,7 @@ func (c *Container) MustGet(key string) any {
 	return object
 }
 
-// Resolve all dependencies
+// Resolve all dependencies.
 func (c *Container) Resolve() error {
 	if c.resolved {
 		return nil
@@ -71,6 +71,13 @@ func (c *Container) Resolve() error {
 	}
 	c.resolved = true
 	return nil
+}
+
+// Resolve all dependencies or panic.
+func (c *Container) MustResolve() {
+	if err := c.Resolve(); err != nil {
+		panic(err)
+	}
 }
 
 func (c *Container) sort() ([]string, error) {
