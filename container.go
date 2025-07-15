@@ -13,7 +13,7 @@ type Container struct {
 	mu           sync.Mutex
 	resolved     bool
 	objects      map[string]any
-	builders     map[string]func() any
+	constructors map[string]func() any
 	dependencies map[string][]string
 }
 
@@ -21,20 +21,20 @@ type Container struct {
 func NewContainer() *Container {
 	return &Container{
 		objects:      make(map[string]any),
-		builders:     make(map[string]func() any),
+		constructors: make(map[string]func() any),
 		dependencies: make(map[string][]string),
 	}
 }
 
 // Register a dependency by key.
-//   - key:     unique name for the dependency
-//   - needs:   list of dependency keys this object depends on
-//   - builder: function that returns the object instance
-func (c *Container) Register(key string, deps []string, builder func() any) {
+//   - key: unique name for the dependency
+//   - deps: list of dependency keys this object depends on
+//   - constructor: function that returns the object instance
+func (c *Container) Register(key string, deps []string, constructor func() any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.dependencies[key] = deps
-	c.builders[key] = builder
+	c.constructors[key] = constructor
 	c.resolved = false
 }
 
@@ -66,7 +66,7 @@ func (c *Container) Resolve() error {
 	if err != nil {
 		return err
 	}
-	if err := c.build(sorted); err != nil {
+	if err := c.construct(sorted); err != nil {
 		return err
 	}
 	c.resolved = true
@@ -133,15 +133,15 @@ func (c *Container) sort() ([]string, error) {
 	return sorted, nil
 }
 
-func (c *Container) build(keys []string) error {
+func (c *Container) construct(keys []string) error {
 	for _, key := range keys {
 		c.mu.Lock()
-		builder := c.builders[key]
+		constructor := c.constructors[key]
 		c.mu.Unlock()
-		if builder == nil {
-			return fmt.Errorf("[%s] builder is nil", key)
+		if constructor == nil {
+			return fmt.Errorf("[%s] constructor is nil", key)
 		}
-		c.objects[key] = builder()
+		c.objects[key] = constructor()
 	}
 	return nil
 }

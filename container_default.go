@@ -11,11 +11,11 @@ var (
 )
 
 // Register a dependency by key.
-//   - key:     unique name for the dependency
-//   - needs:   list of dependency keys this object depends on
-//   - builder: function that returns the object instance
-func Register(key string, needs []string, builder func() any) {
-	defaultC().Register(key, needs, builder)
+//   - key: unique name for the dependency
+//   - deps: list of dependency keys this object depends on
+//   - constructor: function that returns the object instance
+func Register(key string, deps []string, constructor func() any) {
+	defaultC().Register(key, deps, constructor)
 }
 
 // Get a dependency by key.
