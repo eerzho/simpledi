@@ -92,7 +92,7 @@ func TestResolveWhenBuilderIsNil(t *testing.T) {
 func TestMustGet(t *testing.T) {
 	c := simpledi.NewContainer()
 	c.Register("a", nil, func() any { return "a" })
-	c.Resolve()
+	c.MustResolve()
 
 	a := c.MustGet("a")
 	if a != "a" {
@@ -102,7 +102,7 @@ func TestMustGet(t *testing.T) {
 
 func TestMustGetPanic(t *testing.T) {
 	c := simpledi.NewContainer()
-	c.Resolve()
+	c.MustResolve()
 
 	defer func() {
 		if r := recover(); r == nil {
@@ -115,7 +115,7 @@ func TestMustGetPanic(t *testing.T) {
 
 func TestGetAs(t *testing.T) {
 	simpledi.Register("a", nil, func() any { return "a" })
-	simpledi.Resolve()
+	simpledi.MustResolve()
 
 	a, ok := simpledi.GetAs[string]("a")
 	if !ok {
@@ -128,7 +128,7 @@ func TestGetAs(t *testing.T) {
 
 func TestGetAsFail(t *testing.T) {
 	simpledi.Register("a", nil, func() any { return "a" })
-	simpledi.Resolve()
+	simpledi.MustResolve()
 
 	_, ok := simpledi.GetAs[int]("a")
 	if ok {
@@ -138,7 +138,7 @@ func TestGetAsFail(t *testing.T) {
 
 func TestMustGetAs(t *testing.T) {
 	simpledi.Register("a", nil, func() any { return "a" })
-	simpledi.Resolve()
+	simpledi.MustResolve()
 
 	a := simpledi.MustGetAs[string]("a")
 	if a != "a" {
@@ -148,7 +148,7 @@ func TestMustGetAs(t *testing.T) {
 
 func TestMustGetAsPanic(t *testing.T) {
 	simpledi.Register("a", nil, func() any { return "a" })
-	simpledi.Resolve()
+	simpledi.MustResolve()
 
 	defer func() {
 		if r := recover(); r == nil {
