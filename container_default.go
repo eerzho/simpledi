@@ -10,7 +10,7 @@ var (
 	once sync.Once
 )
 
-// Register a dependency by key
+// Register a dependency by key.
 //   - key:     unique name for the dependency
 //   - needs:   list of dependency keys this object depends on
 //   - builder: function that returns the object instance
@@ -18,13 +18,13 @@ func Register(key string, needs []string, builder func() any) {
 	defaultC().Register(key, needs, builder)
 }
 
-// Get a dependency by key
+// Get a dependency by key.
 //   - key: unique name of the dependency
 func Get(key string) (any, bool) {
 	return defaultC().Get(key)
 }
 
-// Get a dependency by key and casts it to the specified type
+// Get a dependency by key and casts it to the specified type.
 //   - key: unique name of the dependency
 func GetAs[T any](key string) (T, bool) {
 	var zero T
@@ -42,13 +42,13 @@ func GetAs[T any](key string) (T, bool) {
 	return typed, true
 }
 
-// Get a dependency by key or panics
+// Get a dependency by key or panics.
 //   - key: unique name of the dependency
 func MustGet(key string) any {
 	return defaultC().MustGet(key)
 }
 
-// Get a dependency by key and casts it to the specified type or panics
+// Get a dependency by key and casts it to the specified type or panics.
 //   - key: unique name of the dependency
 func MustGetAs[T any](key string) T {
 	var zero T
@@ -62,9 +62,14 @@ func MustGetAs[T any](key string) T {
 	return typed
 }
 
-// Resolve all dependencies
+// Resolve all dependencies.
 func Resolve() error {
 	return defaultC().Resolve()
+}
+
+// Resolve all dependencies or panic.
+func MustResolve() {
+	defaultC().MustResolve()
 }
 
 func defaultC() *Container {
