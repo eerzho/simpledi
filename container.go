@@ -17,7 +17,7 @@ type Container struct {
 	dependencies map[string][]string
 }
 
-// NewContainer creates a new DI container.
+// Creates a new DI container.
 func NewContainer() *Container {
 	return &Container{
 		objects:      make(map[string]any),
