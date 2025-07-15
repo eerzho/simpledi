@@ -77,7 +77,7 @@ Suggestions and feedback are always welcome.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=eerzho/simpledi&type=Date)](https://www.star-history.com/#eerzho/simpledi&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=eerzho/simpledi&type=Timeline)](https://www.star-history.com/#eerzho/simpledi&Timeline)
 
 ## Alternatives
 
