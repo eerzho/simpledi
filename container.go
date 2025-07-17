@@ -7,22 +7,34 @@ import (
 	"sync"
 )
 
+type ConstructorFunc func() any
+type DestructorFunc func()
+
 // Container is a DI container that stores created objects.
 // Dependency resolution is based on topological sorting.
 type Container struct {
 	mu           sync.Mutex
 	resolved     bool
 	objects      map[string]any
-	constructors map[string]func() any
 	dependencies map[string][]string
+	constructors map[string]ConstructorFunc
+	destructors  map[string]DestructorFunc
+}
+
+type Option struct {
+	Key          string
+	Dependencies []string
+	Constructor  ConstructorFunc
+	Destructor   DestructorFunc
 }
 
 // Creates a new DI container.
 func NewContainer() *Container {
 	return &Container{
 		objects:      make(map[string]any),
-		constructors: make(map[string]func() any),
 		dependencies: make(map[string][]string),
+		constructors: make(map[string]ConstructorFunc),
+		destructors:  make(map[string]DestructorFunc),
 	}
 }
 
@@ -30,12 +42,42 @@ func NewContainer() *Container {
 //   - key: unique name for the dependency
 //   - deps: list of dependency keys this object depends on
 //   - constructor: function that returns the object instance
-func (c *Container) Register(key string, deps []string, constructor func() any) {
+// func (c *Container) Register(key string, deps []string, constructor func() any) {
+// 	c.mu.Lock()
+// 	defer c.mu.Unlock()
+// 	c.dependencies[key] = deps
+// 	c.constructors[key] = constructor
+// 	c.resolved = false
+// }
+
+func (c *Container) Register(option Option) error {
+	if option.Key == "" {
+		return fmt.Errorf("some error")
+	}
+
+	if option.Constructor == nil {
+		return fmt.Errorf("some error")
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.dependencies[key] = deps
-	c.constructors[key] = constructor
+
+	c.dependencies[option.Key] = option.Dependencies
+	c.constructors[option.Key] = option.Constructor
+
+	if option.Destructor != nil {
+		c.destructors[option.Key] = option.Destructor
+	}
+
 	c.resolved = false
+
+	return nil
+}
+
+func (c *Container) MustRegister(option Option) {
+	if err := c.Register(option); err != nil {
+		panic(err)
+	}
 }
 
 // Get a dependency by key.
@@ -62,13 +104,13 @@ func (c *Container) Resolve() error {
 	if c.resolved {
 		return nil
 	}
+
 	sorted, err := c.sort()
 	if err != nil {
 		return err
 	}
-	if err := c.construct(sorted); err != nil {
-		return err
-	}
+
+	c.construct(sorted)
 	c.resolved = true
 	return nil
 }
@@ -78,6 +120,26 @@ func (c *Container) MustResolve() {
 	if err := c.Resolve(); err != nil {
 		panic(err)
 	}
+}
+
+func (c *Container) Reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if !c.resolved {
+		return
+	}
+
+	for _, destructor := range c.destructors {
+		destructor()
+	}
+
+	c.objects = make(map[string]any)
+	c.dependencies = make(map[string][]string)
+	c.constructors = make(map[string]ConstructorFunc)
+	c.destructors = make(map[string]DestructorFunc)
+
+	c.resolved = false
 }
 
 func (c *Container) sort() ([]string, error) {
@@ -133,15 +195,12 @@ func (c *Container) sort() ([]string, error) {
 	return sorted, nil
 }
 
-func (c *Container) construct(keys []string) error {
+func (c *Container) construct(keys []string) {
 	for _, key := range keys {
 		c.mu.Lock()
 		constructor := c.constructors[key]
 		c.mu.Unlock()
-		if constructor == nil {
-			return fmt.Errorf("[%s] constructor is nil", key)
-		}
+
 		c.objects[key] = constructor()
 	}
-	return nil
 }
