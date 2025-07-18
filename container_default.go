@@ -11,11 +11,15 @@ var (
 )
 
 // Register a dependency by key.
-//   - key:     unique name for the dependency
-//   - needs:   list of dependency keys this object depends on
-//   - builder: function that returns the object instance
-func Register(key string, needs []string, builder func() any) {
-	defaultC().Register(key, needs, builder)
+//   - key: unique name for the dependency
+//   - deps: list of dependency keys this object depends on
+//   - constructor: function that returns the object instance
+func Register(option Option) error {
+	return defaultC().Register(option)
+}
+
+func MustRegister(option Option) {
+	defaultC().MustRegister(option)
 }
 
 // Get a dependency by key.
@@ -70,6 +74,10 @@ func Resolve() error {
 // Resolve all dependencies or panic.
 func MustResolve() {
 	defaultC().MustResolve()
+}
+
+func Reset() {
+	defaultC().Reset()
 }
 
 func defaultC() *Container {

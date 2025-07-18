@@ -16,13 +16,21 @@ func Example() {
 	// create container
 	c := simpledi.NewContainer()
 	// register dependencies
-	c.Register("repo", nil, func() any {
-		fmt.Println("creating repo")
-		return &repo{dsn: "example"}
+	c.MustRegister(simpledi.Option{
+		Key:          "repo",
+		Dependencies: nil,
+		Constructor: func() any {
+			fmt.Println("creating repo")
+			return &repo{dsn: "example"}
+		},
 	})
-	c.Register("service", []string{"repo"}, func() any {
-		fmt.Println("creating service")
-		return &service{repo: c.MustGet("repo").(*repo)}
+	c.MustRegister(simpledi.Option{
+		Key:          "service",
+		Dependencies: []string{"repo"},
+		Constructor: func() any {
+			fmt.Println("creating service")
+			return &service{repo: c.MustGet("repo").(*repo)}
+		},
 	})
 	// resolve all dependencies
 	c.MustResolve()
@@ -42,13 +50,20 @@ func Example_defaultContainer() {
 		repo *repo
 	}
 	// register dependencies
-	simpledi.Register("repo", nil, func() any {
-		fmt.Println("creating repo")
-		return &repo{dsn: "example"}
+	simpledi.MustRegister(simpledi.Option{
+		Key: "repo",
+		Constructor: func() any {
+			fmt.Println("creating repo")
+			return &repo{dsn: "example"}
+		},
 	})
-	simpledi.Register("service", []string{"repo"}, func() any {
-		fmt.Println("creating service")
-		return &service{repo: simpledi.MustGetAs[*repo]("repo")}
+	simpledi.MustRegister(simpledi.Option{
+		Key:          "service",
+		Dependencies: []string{"repo"},
+		Constructor: func() any {
+			fmt.Println("creating service")
+			return &service{repo: simpledi.MustGetAs[*repo]("repo")}
+		},
 	})
 	// resolve all dependencies
 	simpledi.MustResolve()
@@ -70,13 +85,20 @@ func Example_registerInAnyOrder() {
 	// create container
 	c := simpledi.NewContainer()
 	// register dependencies in any order
-	c.Register("service", []string{"repo"}, func() any {
-		fmt.Println("creating service")
-		return &service{repo: c.MustGet("repo").(*repo)}
+	c.MustRegister(simpledi.Option{
+		Key:          "service",
+		Dependencies: []string{"repo"},
+		Constructor: func() any {
+			fmt.Println("creating service")
+			return &service{repo: c.MustGet("repo").(*repo)}
+		},
 	})
-	c.Register("repo", nil, func() any {
-		fmt.Println("creating repo")
-		return &repo{dsn: "example"}
+	c.MustRegister(simpledi.Option{
+		Key: "repo",
+		Constructor: func() any {
+			fmt.Println("creating repo")
+			return &repo{dsn: "example"}
+		},
 	})
 	// resolve all dependencies
 	c.MustResolve()
@@ -98,22 +120,32 @@ func Example_overrideDependency() {
 	// create container
 	c := simpledi.NewContainer()
 	// register dependencies
-	c.Register("repo", nil, func() any {
-		fmt.Println("creating repo")
-		return &repo{dsn: "example"}
+	c.MustRegister(simpledi.Option{
+		Key: "repo",
+		Constructor: func() any {
+			fmt.Println("creating repo")
+			return &repo{dsn: "example"}
+		},
 	})
-	c.Register("service", []string{"repo"}, func() any {
-		fmt.Println("creating service")
-		return &service{repo: c.MustGet("repo").(*repo)}
+	c.MustRegister(simpledi.Option{
+		Key:          "service",
+		Dependencies: []string{"repo"},
+		Constructor: func() any {
+			fmt.Println("creating service")
+			return &service{repo: c.MustGet("repo").(*repo)}
+		},
 	})
 	// resolve all dependencies
 	c.MustResolve()
 	// get resolved dependency
 	fmt.Println(c.MustGet("service").(*service).repo.dsn)
 	// override the "repo"
-	c.Register("repo", nil, func() any {
-		fmt.Println("creating mock")
-		return &repo{dsn: "example-2"}
+	c.MustRegister(simpledi.Option{
+		Key: "repo",
+		Constructor: func() any {
+			fmt.Println("creating mock")
+			return &repo{dsn: "example-2"}
+		},
 	})
 	// resolve all dependencies again
 	c.MustResolve()

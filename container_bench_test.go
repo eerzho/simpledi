@@ -14,13 +14,12 @@ func Benchmark(b *testing.B) {
 		c := simpledi.NewContainer()
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
-			c.Register(
-				key,
-				nil,
-				func() any {
+			c.MustRegister(simpledi.Option{
+				Key: key,
+				Constructor: func() any {
 					return key
 				},
-			)
+			})
 		}
 		c.MustResolve()
 		for j := 0; j < count; j++ {
@@ -39,13 +38,13 @@ func BenchmarkWithDeps(b *testing.B) {
 		prevKeys := []string{}
 		for j := 0; j < count; j++ {
 			key := fmt.Sprintf("key-%d", j)
-			c.Register(
-				key,
-				prevKeys,
-				func() any {
+			c.Register(simpledi.Option{
+				Key:          key,
+				Dependencies: prevKeys,
+				Constructor: func() any {
 					return key
 				},
-			)
+			})
 			prevKeys = append(prevKeys, key)
 		}
 		c.MustResolve()
@@ -78,13 +77,13 @@ func BenchmarkWithRealisticDeps(b *testing.B) {
 					fmt.Sprintf("key-%d", 100+((j-500)+1)%400),
 				}
 			}
-			c.Register(
-				key,
-				deps,
-				func() any {
+			c.Register(simpledi.Option{
+				Key:          key,
+				Dependencies: deps,
+				Constructor: func() any {
 					return key
 				},
-			)
+			})
 		}
 		c.MustResolve()
 		for j := 0; j < count; j++ {
