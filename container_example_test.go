@@ -1,161 +1,306 @@
 package simpledi_test
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/eerzho/simpledi"
 )
 
 func Example() {
-	type repo struct {
-		dsn string
+	// example of structures
+	type Database struct {
+		url string
 	}
-	type service struct {
-		repo *repo
+	type UserService struct {
+		db *Database
 	}
-	// create container
+	type OrderService struct {
+		db          *Database
+		userService *UserService
+	}
+
+	// creating a container
 	c := simpledi.NewContainer()
-	// register dependencies
+
+	// registration of dependencies
 	c.MustRegister(simpledi.Option{
-		Key:          "repo",
-		Dependencies: nil,
-		Constructor: func() any {
-			fmt.Println("creating repo")
-			return &repo{dsn: "example"}
+		Key: "database",
+		Ctor: func() any {
+			fmt.Println("creating database...")
+			return &Database{url: "real_url"}
 		},
 	})
 	c.MustRegister(simpledi.Option{
-		Key:          "service",
-		Dependencies: []string{"repo"},
-		Constructor: func() any {
-			fmt.Println("creating service")
-			return &service{repo: c.MustGet("repo").(*repo)}
+		Key:  "user_service",
+		Deps: []string{"database"},
+		Ctor: func() any {
+			fmt.Println("creating userService...")
+			db := c.MustGet("database").(*Database)
+			return &UserService{db: db}
 		},
 	})
-	// resolve all dependencies
+	c.MustRegister(simpledi.Option{
+		Key:  "order_service",
+		Deps: []string{"database", "user_service"},
+		Ctor: func() any {
+			fmt.Println("creating orderService...")
+			db := c.MustGet("database").(*Database)
+			userService := c.MustGet("user_service").(*UserService)
+			return &OrderService{db: db, userService: userService}
+		},
+	})
+
+	// resolving dependencies
 	c.MustResolve()
-	// get resolved dependency
-	fmt.Println(c.MustGet("service").(*service).repo.dsn)
+
+	// getting dependencies
+	userService := c.MustGet("user_service").(*UserService)
+	orderService := c.MustGet("order_service").(*OrderService)
+
+	fmt.Printf("userService db url: %s\n", userService.db.url)
+	fmt.Printf("orderService db url: %s\n", orderService.db.url)
+	fmt.Printf("same database instance used: %t\n", userService.db == orderService.db)
+	fmt.Printf("orderService has userService: %t\n", orderService.userService == userService)
+
 	// Output:
-	// creating repo
-	// creating service
-	// example
+	// creating database...
+	// creating userService...
+	// creating orderService...
+	// userService db url: real_url
+	// orderService db url: real_url
+	// same database instance used: true
+	// orderService has userService: true
 }
 
-func Example_defaultContainer() {
-	type repo struct {
-		dsn string
+func Example_anyOrder() {
+	// example of structures
+	type Database struct {
+		url string
 	}
-	type service struct {
-		repo *repo
+	type UserService struct {
+		db *Database
 	}
-	// register dependencies
-	simpledi.MustRegister(simpledi.Option{
-		Key: "repo",
-		Constructor: func() any {
-			fmt.Println("creating repo")
-			return &repo{dsn: "example"}
+	type OrderService struct {
+		db          *Database
+		userService *UserService
+	}
+
+	// creating a container
+	c := simpledi.NewContainer()
+
+	// registration of dependencies
+	c.MustRegister(simpledi.Option{
+		Key:  "order_service",
+		Deps: []string{"database", "user_service"},
+		Ctor: func() any {
+			fmt.Println("creating orderService...")
+			db := c.MustGet("database").(*Database)
+			userService := c.MustGet("user_service").(*UserService)
+			return &OrderService{db: db, userService: userService}
 		},
 	})
-	simpledi.MustRegister(simpledi.Option{
-		Key:          "service",
-		Dependencies: []string{"repo"},
-		Constructor: func() any {
-			fmt.Println("creating service")
-			return &service{repo: simpledi.MustGetAs[*repo]("repo")}
+	c.MustRegister(simpledi.Option{
+		Key:  "user_service",
+		Deps: []string{"database"},
+		Ctor: func() any {
+			fmt.Println("creating userService...")
+			db := c.MustGet("database").(*Database)
+			return &UserService{db: db}
 		},
 	})
-	// resolve all dependencies
-	simpledi.MustResolve()
-	// get resolved dependency
-	fmt.Println(simpledi.MustGetAs[*service]("service").repo.dsn)
+	c.MustRegister(simpledi.Option{
+		Key: "database",
+		Ctor: func() any {
+			fmt.Println("creating database...")
+			return &Database{url: "real_url"}
+		},
+	})
+
+	// resolving dependencies
+	c.MustResolve()
+
+	// getting dependencies
+	userService := c.MustGet("user_service").(*UserService)
+	orderService := c.MustGet("order_service").(*OrderService)
+
+	fmt.Printf("userService db url: %s\n", userService.db.url)
+	fmt.Printf("orderService db url: %s\n", orderService.db.url)
+	fmt.Printf("same database instance used: %t\n", userService.db == orderService.db)
+	fmt.Printf("orderService has userService: %t\n", orderService.userService == userService)
+
 	// Output:
-	// creating repo
-	// creating service
-	// example
+	// creating database...
+	// creating userService...
+	// creating orderService...
+	// userService db url: real_url
+	// orderService db url: real_url
+	// same database instance used: true
+	// orderService has userService: true
 }
 
-func Example_registerInAnyOrder() {
-	type repo struct {
-		dsn string
+func Example_override() {
+	// example of structures
+	type Database struct {
+		url string
 	}
-	type service struct {
-		repo *repo
+	type UserService struct {
+		db *Database
 	}
-	// create container
+	type OrderService struct {
+		db          *Database
+		userService *UserService
+	}
+
+	// creating a container
 	c := simpledi.NewContainer()
-	// register dependencies in any order
+
+	// registration of dependencies
 	c.MustRegister(simpledi.Option{
-		Key:          "service",
-		Dependencies: []string{"repo"},
-		Constructor: func() any {
-			fmt.Println("creating service")
-			return &service{repo: c.MustGet("repo").(*repo)}
+		Key: "database",
+		Ctor: func() any {
+			fmt.Println("creating database...")
+			return &Database{url: "real_url"}
 		},
 	})
 	c.MustRegister(simpledi.Option{
-		Key: "repo",
-		Constructor: func() any {
-			fmt.Println("creating repo")
-			return &repo{dsn: "example"}
+		Key:  "user_service",
+		Deps: []string{"database"},
+		Ctor: func() any {
+			fmt.Println("creating userService...")
+			db := c.MustGet("database").(*Database)
+			return &UserService{db: db}
 		},
 	})
-	// resolve all dependencies
+	c.MustRegister(simpledi.Option{
+		Key:  "order_service",
+		Deps: []string{"database", "user_service"},
+		Ctor: func() any {
+			fmt.Println("creating orderService...")
+			db := c.MustGet("database").(*Database)
+			userService := c.MustGet("user_service").(*UserService)
+			return &OrderService{db: db, userService: userService}
+		},
+	})
+
+	// resolving dependencies
 	c.MustResolve()
-	// get resolved dependency
-	fmt.Println(c.MustGet("service").(*service).repo.dsn)
+
+	// getting dependencies
+	userService := c.MustGet("user_service").(*UserService)
+	orderService := c.MustGet("order_service").(*OrderService)
+
+	fmt.Printf("userService db url: %s\n", userService.db.url)
+	fmt.Printf("orderService db url: %s\n", orderService.db.url)
+	fmt.Printf("same database instance used: %t\n", userService.db == orderService.db)
+	fmt.Printf("orderService has userService: %t\n", orderService.userService == userService)
+
+	// overriding database
+	c.Register(simpledi.Option{
+		Key: "database",
+		Ctor: func() any {
+			fmt.Println("creating fake database...")
+			return &Database{url: "fake_url"}
+		},
+	})
+
+	// resolving dependencies
+	c.MustResolve()
+
+	// getting dependencies
+	userService = c.MustGet("user_service").(*UserService)
+	orderService = c.MustGet("order_service").(*OrderService)
+
+	fmt.Printf("userService db url: %s\n", userService.db.url)
+	fmt.Printf("orderService db url: %s\n", orderService.db.url)
+	fmt.Printf("same database instance used: %t\n", userService.db == orderService.db)
+	fmt.Printf("orderService has userService: %t\n", orderService.userService == userService)
+
 	// Output:
-	// creating repo
-	// creating service
-	// example
+	// creating database...
+	// creating userService...
+	// creating orderService...
+	// userService db url: real_url
+	// orderService db url: real_url
+	// same database instance used: true
+	// orderService has userService: true
+	// creating fake database...
+	// creating userService...
+	// creating orderService...
+	// userService db url: fake_url
+	// orderService db url: fake_url
+	// same database instance used: true
+	// orderService has userService: true
 }
 
-func Example_overrideDependency() {
-	type repo struct {
-		dsn string
+func Example_withDestructor() {
+	// example of structures
+	type Database struct {
+		connected bool
 	}
-	type service struct {
-		repo *repo
-	}
-	// create container
+
+	// creating a container
 	c := simpledi.NewContainer()
-	// register dependencies
+
+	// registration of dependencies
 	c.MustRegister(simpledi.Option{
-		Key: "repo",
-		Constructor: func() any {
-			fmt.Println("creating repo")
-			return &repo{dsn: "example"}
+		Key: "database",
+		Ctor: func() any {
+			fmt.Println("connecting to database...")
+			return &Database{connected: true}
+		},
+		Dtor: func() error {
+			fmt.Println("disconnecting from database...")
+			db := c.MustGet("database").(*Database)
+			db.connected = false
+			return nil
 		},
 	})
-	c.MustRegister(simpledi.Option{
-		Key:          "service",
-		Dependencies: []string{"repo"},
-		Constructor: func() any {
-			fmt.Println("creating service")
-			return &service{repo: c.MustGet("repo").(*repo)}
-		},
-	})
-	// resolve all dependencies
+
+	// resolving dependencies
 	c.MustResolve()
-	// get resolved dependency
-	fmt.Println(c.MustGet("service").(*service).repo.dsn)
-	// override the "repo"
-	c.MustRegister(simpledi.Option{
-		Key: "repo",
-		Constructor: func() any {
-			fmt.Println("creating mock")
-			return &repo{dsn: "example-2"}
-		},
-	})
-	// resolve all dependencies again
-	c.MustResolve()
-	// get resolved dependency
-	fmt.Println(c.MustGet("service").(*service).repo.dsn)
+
+	// getting dependencies
+	db := c.MustGet("database").(*Database)
+
+	fmt.Printf("database connected: %t\n", db.connected)
+
+	// resetting container
+	c.MustReset()
+
+	fmt.Printf("database connected: %t\n", db.connected)
+
 	// Output:
-	// creating repo
-	// creating service
-	// example
-	// creating mock
-	// creating service
-	// example-2
+	// connecting to database...
+	// database connected: true
+	// disconnecting from database...
+	// database connected: false
+}
+
+func Example_errorHandling() {
+	// example of structures
+	type Database struct {
+		url string
+	}
+
+	// creating a container
+	c := simpledi.NewContainer()
+
+	// registration of dependencies
+	err := c.Register(simpledi.Option{
+		Ctor: func() any {
+			return &Database{}
+		},
+	})
+
+	// parsing error using simpledi.Error structure
+	var diErr *simpledi.Error
+	if errors.As(err, &diErr) {
+		fmt.Printf("registration failed: %s\n", diErr.Error())
+		fmt.Printf("type ErrEmptyKey: %t\n", diErr.Type == simpledi.ErrEmptyKey)
+	}
+
+	// Output:
+	// registration failed: dependency key cannot be empty
+	// type ErrEmptyKey: true
 }
