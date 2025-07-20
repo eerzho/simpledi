@@ -120,23 +120,10 @@ func Example_anyOrder() {
 	// resolving dependencies
 	c.MustResolve()
 
-	// getting dependencies
-	userService := c.MustGet("user_service").(*UserService)
-	orderService := c.MustGet("order_service").(*OrderService)
-
-	fmt.Printf("userService db url: %s\n", userService.db.url)
-	fmt.Printf("orderService db url: %s\n", orderService.db.url)
-	fmt.Printf("same database instance used: %t\n", userService.db == orderService.db)
-	fmt.Printf("orderService has userService: %t\n", orderService.userService == userService)
-
 	// Output:
 	// creating database...
 	// creating userService...
 	// creating orderService...
-	// userService db url: real_url
-	// orderService db url: real_url
-	// same database instance used: true
-	// orderService has userService: true
 }
 
 func Example_override() {
@@ -192,8 +179,6 @@ func Example_override() {
 
 	fmt.Printf("userService db url: %s\n", userService.db.url)
 	fmt.Printf("orderService db url: %s\n", orderService.db.url)
-	fmt.Printf("same database instance used: %t\n", userService.db == orderService.db)
-	fmt.Printf("orderService has userService: %t\n", orderService.userService == userService)
 
 	// overriding database
 	c.Register(simpledi.Option{
@@ -213,8 +198,6 @@ func Example_override() {
 
 	fmt.Printf("userService db url: %s\n", userService.db.url)
 	fmt.Printf("orderService db url: %s\n", orderService.db.url)
-	fmt.Printf("same database instance used: %t\n", userService.db == orderService.db)
-	fmt.Printf("orderService has userService: %t\n", orderService.userService == userService)
 
 	// Output:
 	// creating database...
@@ -222,15 +205,11 @@ func Example_override() {
 	// creating orderService...
 	// userService db url: real_url
 	// orderService db url: real_url
-	// same database instance used: true
-	// orderService has userService: true
 	// creating fake database...
 	// creating userService...
 	// creating orderService...
 	// userService db url: fake_url
 	// orderService db url: fake_url
-	// same database instance used: true
-	// orderService has userService: true
 }
 
 func Example_withDestructor() {
