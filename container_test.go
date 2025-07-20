@@ -333,7 +333,7 @@ func assertErr(t *testing.T, err error) {
 	}
 }
 
-func assertErrType(t *testing.T, err error, wantType simpledi.ErrorType) {
+func assertErrType(t *testing.T, err error, want simpledi.ErrorType) {
 	t.Helper()
 
 	assertErr(t, err)
@@ -343,8 +343,8 @@ func assertErrType(t *testing.T, err error, wantType simpledi.ErrorType) {
 		t.Fatalf("got: %T, want: %T", err, diErr)
 	}
 
-	if diErr.Type != wantType {
-		t.Fatalf("got: %v, want: %v", diErr.Type, wantType)
+	if diErr.Type != want {
+		t.Fatalf("got: %v, want: %v", diErr.Type, want)
 	}
 }
 
