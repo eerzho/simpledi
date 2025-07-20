@@ -3,72 +3,51 @@
 package simpledi
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 )
 
-type ConstructorFunc func() any
-type DestructorFunc func()
+type Option struct {
+	Key  string
+	Deps []string
+	Ctor func() any
+	Dtor func() error
+}
 
-// Container is a DI container that stores created objects.
-// Dependency resolution is based on topological sorting.
 type Container struct {
 	mu           sync.Mutex
 	resolved     bool
 	objects      map[string]any
 	dependencies map[string][]string
-	constructors map[string]ConstructorFunc
-	destructors  map[string]DestructorFunc
+	constructors map[string]func() any
+	destructors  map[string]func() error
 }
 
-type Option struct {
-	Key          string
-	Dependencies []string
-	Constructor  ConstructorFunc
-	Destructor   DestructorFunc
-}
-
-// Creates a new DI container.
 func NewContainer() *Container {
 	return &Container{
 		objects:      make(map[string]any),
 		dependencies: make(map[string][]string),
-		constructors: make(map[string]ConstructorFunc),
-		destructors:  make(map[string]DestructorFunc),
+		constructors: make(map[string]func() any),
+		destructors:  make(map[string]func() error),
 	}
 }
 
-// Register a dependency by key.
-//   - key: unique name for the dependency
-//   - deps: list of dependency keys this object depends on
-//   - constructor: function that returns the object instance
-// func (c *Container) Register(key string, deps []string, constructor func() any) {
-// 	c.mu.Lock()
-// 	defer c.mu.Unlock()
-// 	c.dependencies[key] = deps
-// 	c.constructors[key] = constructor
-// 	c.resolved = false
-// }
-
 func (c *Container) Register(option Option) error {
 	if option.Key == "" {
-		return fmt.Errorf("some error")
+		return errEmptyKey()
 	}
-
-	if option.Constructor == nil {
-		return fmt.Errorf("some error")
+	if option.Ctor == nil {
+		return errNilCtor(option.Key)
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.dependencies[option.Key] = option.Dependencies
-	c.constructors[option.Key] = option.Constructor
-
-	if option.Destructor != nil {
-		c.destructors[option.Key] = option.Destructor
+	c.dependencies[option.Key] = option.Deps
+	c.constructors[option.Key] = option.Ctor
+	if option.Dtor != nil {
+		c.destructors[option.Key] = option.Dtor
 	}
-
 	c.resolved = false
 
 	return nil
@@ -80,66 +59,101 @@ func (c *Container) MustRegister(option Option) {
 	}
 }
 
-// Get a dependency by key.
-//   - key: unique name of the dependency
-func (c *Container) Get(key string) (any, bool) {
+func (c *Container) Get(key string) (any, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	object, ok := c.objects[key]
-	return object, ok
+	if !ok {
+		return nil, errNotFound(key)
+	}
+	return object, nil
 }
 
-// Get a dependency by key or panics.
-//   - key: unique name of the dependency
 func (c *Container) MustGet(key string) any {
-	object, ok := c.Get(key)
-	if !ok {
-		panic(fmt.Sprintf("dependency [%s] not found", key))
+	object, err := c.Get(key)
+	if err != nil {
+		panic(err)
 	}
 	return object
 }
 
-// Resolve all dependencies.
 func (c *Container) Resolve() error {
+	c.mu.Lock()
+
 	if c.resolved {
+		c.mu.Unlock()
 		return nil
 	}
 
 	sorted, err := c.sort()
 	if err != nil {
+		c.mu.Unlock()
 		return err
 	}
 
-	c.construct(sorted)
+	for _, key := range sorted {
+		constructor := c.constructors[key]
+
+		c.mu.Unlock()
+		object := constructor()
+		c.mu.Lock()
+
+		c.objects[key] = object
+	}
 	c.resolved = true
+
+	c.mu.Unlock()
+
 	return nil
 }
 
-// Resolve all dependencies or panic.
 func (c *Container) MustResolve() {
 	if err := c.Resolve(); err != nil {
 		panic(err)
 	}
 }
 
-func (c *Container) Reset() {
+func (c *Container) Reset() error {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if !c.resolved {
-		return
+		c.mu.Unlock()
+		return nil
 	}
 
-	for _, destructor := range c.destructors {
-		destructor()
+	sorted, _ := c.sort()
+
+	var errs []error
+	for i := len(sorted) - 1; i >= 0; i-- {
+		key := sorted[i]
+		if destructor, ok := c.destructors[key]; ok {
+			c.mu.Unlock()
+			if err := destructor(); err != nil {
+				errs = append(errs, err)
+			}
+			c.mu.Lock()
+		}
 	}
 
 	c.objects = make(map[string]any)
 	c.dependencies = make(map[string][]string)
-	c.constructors = make(map[string]ConstructorFunc)
-	c.destructors = make(map[string]DestructorFunc)
-
+	c.constructors = make(map[string]func() any)
+	c.destructors = make(map[string]func() error)
 	c.resolved = false
+
+	c.mu.Unlock()
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}
+
+func (c *Container) MustReset() {
+	if err := c.Reset(); err != nil {
+		panic(err)
+	}
 }
 
 func (c *Container) sort() ([]string, error) {
@@ -147,29 +161,34 @@ func (c *Container) sort() ([]string, error) {
 	if depsCount == 0 {
 		return nil, nil
 	}
+
 	inDegree := make(map[string]int, depsCount)
 	for key := range c.dependencies {
 		inDegree[key] = 0
 	}
+
 	for key, deps := range c.dependencies {
 		for _, dep := range deps {
 			if _, exists := c.dependencies[dep]; !exists {
-				return nil, fmt.Errorf("[%s] not declared", dep)
+				return nil, errMissingDep(key, dep)
 			}
 			inDegree[key]++
 		}
 	}
+
 	queue := make([]string, 0, depsCount)
 	for key, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, key)
 		}
 	}
+
 	sorted := make([]string, 0, depsCount)
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
 		sorted = append(sorted, current)
+
 		for key, deps := range c.dependencies {
 			for _, dep := range deps {
 				if dep == current {
@@ -182,6 +201,7 @@ func (c *Container) sort() ([]string, error) {
 			}
 		}
 	}
+
 	sortedCount := len(sorted)
 	if sortedCount != depsCount {
 		cycles := make([]string, 0, depsCount-sortedCount)
@@ -190,17 +210,8 @@ func (c *Container) sort() ([]string, error) {
 				cycles = append(cycles, key)
 			}
 		}
-		return nil, fmt.Errorf("cyclic detected: %v", cycles)
+		return nil, errCyclicDeps(cycles)
 	}
+
 	return sorted, nil
-}
-
-func (c *Container) construct(keys []string) {
-	for _, key := range keys {
-		c.mu.Lock()
-		constructor := c.constructors[key]
-		c.mu.Unlock()
-
-		c.objects[key] = constructor()
-	}
 }
