@@ -83,13 +83,13 @@ func BenchmarkReset(b *testing.B) {
 				return &TestStruct{value: "test"}
 			},
 			Dtor: func() error {
-				return nil
+				return fmt.Errorf("some error")
 			},
 		})
 		c.MustResolve()
 
 		b.StartTimer()
-		c.MustReset()
+		_ = c.Reset()
 		b.StopTimer()
 	}
 }
@@ -123,7 +123,6 @@ func BenchmarkFullPipelineWith10Dependencies(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		c := simpledi.NewContainer()
 
-		// Register 10 dependencies
 		for j := 0; j < 10; j++ {
 			key := fmt.Sprintf("test-%d", j)
 			c.MustRegister(simpledi.Option{
@@ -136,7 +135,6 @@ func BenchmarkFullPipelineWith10Dependencies(b *testing.B) {
 
 		c.MustResolve()
 
-		// Get all dependencies
 		for j := 0; j < 10; j++ {
 			key := fmt.Sprintf("test-%d", j)
 			_ = c.MustGet(key)
@@ -155,7 +153,6 @@ func BenchmarkFullPipelineWith100Dependencies(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		c := simpledi.NewContainer()
 
-		// Register 100 dependencies
 		for j := 0; j < 100; j++ {
 			key := fmt.Sprintf("test-%d", j)
 			c.MustRegister(simpledi.Option{
@@ -168,7 +165,6 @@ func BenchmarkFullPipelineWith100Dependencies(b *testing.B) {
 
 		c.MustResolve()
 
-		// Get all dependencies
 		for j := 0; j < 100; j++ {
 			key := fmt.Sprintf("test-%d", j)
 			_ = c.MustGet(key)
@@ -187,7 +183,6 @@ func BenchmarkFullPipelineWithDependencyChain(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		c := simpledi.NewContainer()
 
-		// Register dependencies with chain A -> B -> C -> D -> E
 		c.MustRegister(simpledi.Option{
 			Key: "a",
 			Ctor: func() any {
@@ -225,7 +220,6 @@ func BenchmarkFullPipelineWithDependencyChain(b *testing.B) {
 
 		c.MustResolve()
 
-		// Get all dependencies
 		_ = c.MustGet("a")
 		_ = c.MustGet("b")
 		_ = c.MustGet("c")

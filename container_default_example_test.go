@@ -59,6 +59,8 @@ func Example_default() {
 	fmt.Printf("same database instance used: %t\n", userService.db == orderService.db)
 	fmt.Printf("orderService has userService: %t\n", orderService.userService == userService)
 
+	simpledi.MustReset()
+
 	// Output:
 	// creating database...
 	// creating userService...
