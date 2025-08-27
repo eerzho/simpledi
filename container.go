@@ -7,13 +7,19 @@ import (
 	"sync"
 )
 
+// Def describes the dependency.
 type Def struct {
-	Key  string
+	// Key is a unique name for the dependency.
+	Key string
+	// Deps is a list of dependency keys that this dependency requires.
 	Deps []string
+	// Ctor is the constructor function that creates the dependency instance.
 	Ctor func() any
+	// Dtor is the destructor function that cleans up the dependency.
 	Dtor func() error
 }
 
+// Container manages dependencies.
 type Container struct {
 	mu           sync.Mutex
 	resolved     bool
@@ -23,6 +29,7 @@ type Container struct {
 	destructors  map[string]func() error
 }
 
+// NewContainer creates a clean сontainer.
 func NewContainer() *Container {
 	return &Container{
 		objects:      make(map[string]any),
@@ -32,6 +39,8 @@ func NewContainer() *Container {
 	}
 }
 
+// Register registers a dependency.
+//   - def: this is a dependency description
 func (c *Container) Register(def Def) error {
 	if def.Key == "" {
 		return errEmptyKey()
@@ -53,12 +62,16 @@ func (c *Container) Register(def Def) error {
 	return nil
 }
 
+// MustRegister registers a dependency or panics on error.
+//   - def: this is a dependency description
 func (c *Container) MustRegister(def Def) {
 	if err := c.Register(def); err != nil {
 		panic(err)
 	}
 }
 
+// Get gets dependency.
+//   - key: this is a unique name for the dependency
 func (c *Container) Get(key string) (any, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -70,6 +83,8 @@ func (c *Container) Get(key string) (any, error) {
 	return object, nil
 }
 
+// MustGet gets dependency or panics on error.
+//   - key: this is a unique name for the dependency
 func (c *Container) MustGet(key string) any {
 	object, err := c.Get(key)
 	if err != nil {
@@ -78,6 +93,7 @@ func (c *Container) MustGet(key string) any {
 	return object
 }
 
+// Resolve resolves all dependencies.
 func (c *Container) Resolve() error {
 	c.mu.Lock()
 
@@ -108,12 +124,14 @@ func (c *Container) Resolve() error {
 	return nil
 }
 
+// MustResolve resolves all dependencies or panics on error.
 func (c *Container) MustResolve() {
 	if err := c.Resolve(); err != nil {
 		panic(err)
 	}
 }
 
+// Reset resets the container.
 func (c *Container) Reset() error {
 	c.mu.Lock()
 
@@ -150,6 +168,7 @@ func (c *Container) Reset() error {
 	return nil
 }
 
+// MustReset resets the container or panics on error.
 func (c *Container) MustReset() {
 	if err := c.Reset(); err != nil {
 		panic(err)
