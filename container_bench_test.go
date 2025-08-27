@@ -17,7 +17,7 @@ func BenchmarkRegister(b *testing.B) {
 		c := simpledi.NewContainer()
 
 		b.StartTimer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "test",
 			Ctor: func() any {
 				return &TestStruct{value: "test"}
@@ -35,7 +35,7 @@ func BenchmarkResolve(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "test",
 			Ctor: func() any {
 				return &TestStruct{value: "test"}
@@ -54,7 +54,7 @@ func BenchmarkGet(b *testing.B) {
 	}
 
 	c := simpledi.NewContainer()
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key: "test",
 		Ctor: func() any {
 			return &TestStruct{value: "test"}
@@ -77,7 +77,7 @@ func BenchmarkReset(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "test",
 			Ctor: func() any {
 				return &TestStruct{value: "test"}
@@ -102,7 +102,7 @@ func BenchmarkFullPipeline(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "test",
 			Ctor: func() any {
 				return &TestStruct{value: "test"}
@@ -125,7 +125,7 @@ func BenchmarkFullPipelineWith10Dependencies(b *testing.B) {
 
 		for j := 0; j < 10; j++ {
 			key := fmt.Sprintf("test-%d", j)
-			c.MustRegister(simpledi.Option{
+			c.MustRegister(simpledi.Def{
 				Key: key,
 				Ctor: func() any {
 					return &TestStruct{value: key}
@@ -155,7 +155,7 @@ func BenchmarkFullPipelineWith100Dependencies(b *testing.B) {
 
 		for j := 0; j < 100; j++ {
 			key := fmt.Sprintf("test-%d", j)
-			c.MustRegister(simpledi.Option{
+			c.MustRegister(simpledi.Def{
 				Key: key,
 				Ctor: func() any {
 					return &TestStruct{value: key}
@@ -183,34 +183,34 @@ func BenchmarkFullPipelineWithDependencyChain(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		c := simpledi.NewContainer()
 
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &TestStruct{value: "a"}
 			},
 		})
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "b",
 			Deps: []string{"a"},
 			Ctor: func() any {
 				return &TestStruct{value: "b"}
 			},
 		})
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "c",
 			Deps: []string{"b"},
 			Ctor: func() any {
 				return &TestStruct{value: "c"}
 			},
 		})
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "d",
 			Deps: []string{"c"},
 			Ctor: func() any {
 				return &TestStruct{value: "d"}
 			},
 		})
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "e",
 			Deps: []string{"d"},
 			Ctor: func() any {

@@ -24,14 +24,14 @@ func Example() {
 	c := simpledi.NewContainer()
 
 	// registration of dependencies
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key: "database",
 		Ctor: func() any {
 			fmt.Println("creating database...")
 			return &Database{url: "real_url"}
 		},
 	})
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key:  "user_service",
 		Deps: []string{"database"},
 		Ctor: func() any {
@@ -40,7 +40,7 @@ func Example() {
 			return &UserService{db: db}
 		},
 	})
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key:  "order_service",
 		Deps: []string{"database", "user_service"},
 		Ctor: func() any {
@@ -90,7 +90,7 @@ func Example_anyOrder() {
 	c := simpledi.NewContainer()
 
 	// registration of dependencies
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key:  "order_service",
 		Deps: []string{"database", "user_service"},
 		Ctor: func() any {
@@ -100,7 +100,7 @@ func Example_anyOrder() {
 			return &OrderService{db: db, userService: userService}
 		},
 	})
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key:  "user_service",
 		Deps: []string{"database"},
 		Ctor: func() any {
@@ -109,7 +109,7 @@ func Example_anyOrder() {
 			return &UserService{db: db}
 		},
 	})
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key: "database",
 		Ctor: func() any {
 			fmt.Println("creating database...")
@@ -143,14 +143,14 @@ func Example_override() {
 	c := simpledi.NewContainer()
 
 	// registration of dependencies
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key: "database",
 		Ctor: func() any {
 			fmt.Println("creating database...")
 			return &Database{url: "real_url"}
 		},
 	})
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key:  "user_service",
 		Deps: []string{"database"},
 		Ctor: func() any {
@@ -159,7 +159,7 @@ func Example_override() {
 			return &UserService{db: db}
 		},
 	})
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key:  "order_service",
 		Deps: []string{"database", "user_service"},
 		Ctor: func() any {
@@ -181,7 +181,7 @@ func Example_override() {
 	fmt.Printf("orderService db url: %s\n", orderService.db.url)
 
 	// overriding database
-	c.Register(simpledi.Option{
+	c.Register(simpledi.Def{
 		Key: "database",
 		Ctor: func() any {
 			fmt.Println("creating fake database...")
@@ -222,7 +222,7 @@ func Example_withDestructor() {
 	c := simpledi.NewContainer()
 
 	// registration of dependencies
-	c.MustRegister(simpledi.Option{
+	c.MustRegister(simpledi.Def{
 		Key: "database",
 		Ctor: func() any {
 			fmt.Println("connecting to database...")
@@ -266,7 +266,7 @@ func Example_errorHandling() {
 	c := simpledi.NewContainer()
 
 	// registration of dependencies
-	err := c.Register(simpledi.Option{
+	err := c.Register(simpledi.Def{
 		Ctor: func() any {
 			return &Database{}
 		},

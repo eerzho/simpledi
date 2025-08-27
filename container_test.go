@@ -13,7 +13,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		err := c.Register(simpledi.Option{
+		err := c.Register(simpledi.Def{
 			Key:  "a",
 			Ctor: func() any { return &A{} },
 			Dtor: func() error { return nil },
@@ -23,7 +23,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("empty key should return ErrEmptyKey", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		err := c.Register(simpledi.Option{
+		err := c.Register(simpledi.Def{
 			Ctor: func() any { return &A{} },
 		})
 		assertErrType(t, err, simpledi.ErrEmptyKey)
@@ -31,7 +31,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("nil constructor should return ErrNilCtor", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		err := c.Register(simpledi.Option{
+		err := c.Register(simpledi.Def{
 			Key: "a",
 		})
 		assertErrType(t, err, simpledi.ErrNilCtor)
@@ -44,7 +44,7 @@ func TestMustRegister(t *testing.T) {
 	t.Run("successful", func(t *testing.T) {
 		c := simpledi.NewContainer()
 		assertNoPanic(t, func() {
-			c.MustRegister(simpledi.Option{
+			c.MustRegister(simpledi.Def{
 				Key: "a",
 				Ctor: func() any {
 					return &A{}
@@ -56,7 +56,7 @@ func TestMustRegister(t *testing.T) {
 	t.Run("should panic", func(t *testing.T) {
 		c := simpledi.NewContainer()
 		assertPanic(t, func() {
-			c.MustRegister(simpledi.Option{
+			c.MustRegister(simpledi.Def{
 				Ctor: func() any {
 					return &A{}
 				},
@@ -70,7 +70,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -84,7 +84,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("wrong key should return ErrNotFound", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -101,7 +101,7 @@ func TestMustGet(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -115,7 +115,7 @@ func TestMustGet(t *testing.T) {
 
 	t.Run("should panic", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -134,13 +134,13 @@ func TestResolve(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
 			},
 		})
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "b",
 			Deps: []string{"a"},
 			Ctor: func() any {
@@ -153,7 +153,7 @@ func TestResolve(t *testing.T) {
 
 	t.Run("missing dep should return ErrMissingDep", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "a",
 			Deps: []string{"b"},
 			Ctor: func() any {
@@ -166,14 +166,14 @@ func TestResolve(t *testing.T) {
 
 	t.Run("cyclic dependency should return ErrCyclicDeps", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "a",
 			Deps: []string{"b"},
 			Ctor: func() any {
 				return &A{}
 			},
 		})
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "b",
 			Deps: []string{"a"},
 			Ctor: func() any {
@@ -186,7 +186,7 @@ func TestResolve(t *testing.T) {
 
 	t.Run("resolved container should skip resolve", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -209,7 +209,7 @@ func TestMustResolve(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -222,7 +222,7 @@ func TestMustResolve(t *testing.T) {
 
 	t.Run("should panic", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key:  "a",
 			Deps: []string{"b"},
 			Ctor: func() any {
@@ -240,7 +240,7 @@ func TestReset(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -253,7 +253,7 @@ func TestReset(t *testing.T) {
 
 	t.Run("destructor should return error", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -269,7 +269,7 @@ func TestReset(t *testing.T) {
 
 	t.Run("not resolved container should skip reset", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -287,7 +287,7 @@ func TestMustReset(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}
@@ -301,7 +301,7 @@ func TestMustReset(t *testing.T) {
 
 	t.Run("should panic", func(t *testing.T) {
 		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Option{
+		c.MustRegister(simpledi.Def{
 			Key: "a",
 			Ctor: func() any {
 				return &A{}

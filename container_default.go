@@ -9,12 +9,12 @@ var (
 	once sync.Once
 )
 
-func Register(option Option) error {
-	return defaultC().Register(option)
+func Register(def Def) error {
+	return defaultC().Register(def)
 }
 
-func MustRegister(option Option) {
-	defaultC().MustRegister(option)
+func MustRegister(def Def) {
+	defaultC().MustRegister(def)
 }
 
 func Get(key string) (any, error) {

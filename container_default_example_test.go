@@ -20,14 +20,14 @@ func Example_default() {
 	}
 
 	// registration of dependencies
-	simpledi.MustRegister(simpledi.Option{
+	simpledi.MustRegister(simpledi.Def{
 		Key: "database",
 		Ctor: func() any {
 			fmt.Println("creating database...")
 			return &Database{url: "real_url"}
 		},
 	})
-	simpledi.MustRegister(simpledi.Option{
+	simpledi.MustRegister(simpledi.Def{
 		Key:  "user_service",
 		Deps: []string{"database"},
 		Ctor: func() any {
@@ -36,7 +36,7 @@ func Example_default() {
 			return &UserService{db: db}
 		},
 	})
-	simpledi.MustRegister(simpledi.Option{
+	simpledi.MustRegister(simpledi.Def{
 		Key:  "order_service",
 		Deps: []string{"database", "user_service"},
 		Ctor: func() any {

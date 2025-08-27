@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type Option struct {
+type Def struct {
 	Key  string
 	Deps []string
 	Ctor func() any
@@ -32,29 +32,29 @@ func NewContainer() *Container {
 	}
 }
 
-func (c *Container) Register(option Option) error {
-	if option.Key == "" {
+func (c *Container) Register(def Def) error {
+	if def.Key == "" {
 		return errEmptyKey()
 	}
-	if option.Ctor == nil {
-		return errNilCtor(option.Key)
+	if def.Ctor == nil {
+		return errNilCtor(def.Key)
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.dependencies[option.Key] = option.Deps
-	c.constructors[option.Key] = option.Ctor
-	if option.Dtor != nil {
-		c.destructors[option.Key] = option.Dtor
+	c.dependencies[def.Key] = def.Deps
+	c.constructors[def.Key] = def.Ctor
+	if def.Dtor != nil {
+		c.destructors[def.Key] = def.Dtor
 	}
 	c.resolved = false
 
 	return nil
 }
 
-func (c *Container) MustRegister(option Option) {
-	if err := c.Register(option); err != nil {
+func (c *Container) MustRegister(def Def) {
+	if err := c.Register(def); err != nil {
 		panic(err)
 	}
 }
