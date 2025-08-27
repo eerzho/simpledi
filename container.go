@@ -29,7 +29,7 @@ type Container struct {
 	destructors  map[string]func() error
 }
 
-// NewContainer creates a clean сontainer.
+// NewContainer creates a new container.
 func NewContainer() *Container {
 	return &Container{
 		objects:      make(map[string]any),
