@@ -22,10 +22,13 @@ const (
 
 // Error represents a dependency injection error with specific type and message.
 type Error struct {
-	// Type is the specific error type.
-	Type ErrorType
-	// message is the human-readable error description.
+	errType ErrorType
 	message string
+}
+
+// Type returns the error type.
+func (e *Error) Type() ErrorType {
+	return e.errType
 }
 
 // Error returns the error message.
@@ -35,21 +38,21 @@ func (e *Error) Error() string {
 
 func errEmptyKey() *Error {
 	return &Error{
-		Type:    ErrEmptyKey,
+		errType: ErrEmptyKey,
 		message: "dependency key cannot be empty",
 	}
 }
 
 func errNilCtor(key string) *Error {
 	return &Error{
-		Type:    ErrNilCtor,
+		errType: ErrNilCtor,
 		message: fmt.Sprintf("constructor for dependency [%s] cannot be nil", key),
 	}
 }
 
 func errMissingDep(key, dep string) *Error {
 	return &Error{
-		Type:    ErrMissingDep,
+		errType: ErrMissingDep,
 		message: fmt.Sprintf("dependency [%s] required by [%s] is not registered", dep, key),
 	}
 }
@@ -60,21 +63,21 @@ func errCyclicDeps(deps []string) *Error {
 		formatted[i] = fmt.Sprintf("[%s]", dep)
 	}
 	return &Error{
-		Type:    ErrCyclicDeps,
+		errType: ErrCyclicDeps,
 		message: fmt.Sprintf("cyclic dependency detected among: %v", formatted),
 	}
 }
 
 func errNotFound(key string) *Error {
 	return &Error{
-		Type:    ErrNotFound,
+		errType: ErrNotFound,
 		message: fmt.Sprintf("dependency [%s] not found", key),
 	}
 }
 
 func errWrongType(key string, expected, actual any) *Error {
 	return &Error{
-		Type:    ErrWrongType,
+		errType: ErrWrongType,
 		message: fmt.Sprintf("dependency [%s] cannot be cast from [%T] to [%T]", key, actual, expected),
 	}
 }
