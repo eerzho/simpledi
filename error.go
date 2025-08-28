@@ -2,22 +2,33 @@ package simpledi
 
 import "fmt"
 
+// ErrorType represents different types of dependency injection errors.
 type ErrorType int
 
 const (
+	// ErrEmptyKey indicates that dependency key is empty.
 	ErrEmptyKey ErrorType = iota
+	// ErrNilCtor indicates that constructor function is nil.
 	ErrNilCtor
+	// ErrMissingDep indicates that required dependency is not registered.
 	ErrMissingDep
+	// ErrCyclicDeps indicates that circular dependency detected.
 	ErrCyclicDeps
+	// ErrNotFound indicates that dependency is not found in container.
 	ErrNotFound
+	// ErrWrongType indicates that dependency cannot be cast to expected type.
 	ErrWrongType
 )
 
+// Error represents a dependency injection error with specific type and message.
 type Error struct {
-	Type    ErrorType
+	// Type is the specific error type.
+	Type ErrorType
+	// message is the human-readable error description.
 	message string
 }
 
+// Error returns the error message.
 func (e *Error) Error() string {
 	return e.message
 }
