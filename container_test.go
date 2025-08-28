@@ -343,8 +343,8 @@ func assertErrType(t *testing.T, err error, want simpledi.ErrorType) {
 		t.Fatalf("got: %T, want: %T", err, diErr)
 	}
 
-	if diErr.Type != want {
-		t.Fatalf("got: %v, want: %v", diErr.Type, want)
+	if diErr.Type() != want {
+		t.Fatalf("got: %v, want: %v", diErr.Type(), want)
 	}
 }
 
