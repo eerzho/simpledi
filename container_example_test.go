@@ -246,7 +246,7 @@ func Example_override() {
 	fmt.Printf("orderService db url: %s\n", orderService.db.url)
 
 	// overriding database
-	c.Register(simpledi.Def{
+	c.MustRegister(simpledi.Def{
 		Key: "database",
 		Ctor: func() any {
 			fmt.Println("creating fake database...")
@@ -333,7 +333,7 @@ func Example_errorHandling() {
 	// registration of dependencies
 	err := c.Register(simpledi.Def{
 		Ctor: func() any {
-			return &Database{}
+			return &Database{url: "real_url"}
 		},
 	})
 
