@@ -17,54 +17,62 @@ go get github.com/eerzho/simpledi
 ###### Getting started
 
 ```go
-type repo struct {
-	dsn string
+type Database struct {
+	url string
 }
-type service struct {
-	repo *repo
+type UserService struct {
+	db *Database
 }
 
-// create container
-c := simpledi.NewContainer()
-
-// register dependencies
-c.Register("repo", nil, func() any {
-	return &repo{dsn: "example"}
+// registration of dependencies
+simpledi.MustRegister(simpledi.Def{
+	Key: "database",
+	Ctor: func() any {
+		return &Database{url: "real_url"}
+	},
 })
-c.Register("service", []string{"repo"}, func() any {
-	return &service{repo: c.Get("repo").(*repo)}
+simpledi.MustRegister(simpledi.Def{
+	Key:  "user_service",
+	Deps: []string{"database"},
+	Ctor: func() any {
+		db := simpledi.MustGetAs[*Database]("database")
+		return &UserService{db: db}
+	},
 })
 
-// resolve all dependencies
-c.Resolve()
+// resolving dependencies
+simpledi.MustResolve()
+
+// getting dependencies
+userService := simpledi.MustGetAs[*UserService]("user_service")
 ```
 
-You can see the full documentation and list of examples at [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi).
+You can see the full documentation and list of examples at [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi#pkg-examples).
 
 ---
 
 ## Usage
 
-### Notes
+### Key Features
 
-* You can register dependencies in any order.
-* Call `Resolve` only after all registrations are done.
-* To recreate all dependencies, call `Resolve` again.
-* To override an implementation, register with the same key and call `Resolve` again.
+* **Zero dependencies** - Pure Go, no external packages
+* **No reflection** - Type-safe with generics support
+* **Dependency ordering** - Register in any order, automatic resolution
+* **Lifecycle management** - Constructor and destructor support
+* **Thread-safe** - Protected by mutex for concurrent access
+* **Global container** - Use package-level functions without creating container
 
-### Functions
-* `NewContainer`: creates a new DI container
-* `Register`: register a dependency by key
-* `Get`: get a dependency by key
-* `GetAs`: get a dependency by key and casts it to the specified type
-* `MustGet`: get a dependency by key or panics
-* `MustGetAs`: get a dependency by key and casts it to the specified type or panics
-* `Resolve`: resolve all dependencies
-* `MustResolve`: resolve all dependencies or panic
+### Best Practices
+
+* **Use descriptive keys**: `userService` not `service`
+* **Register then resolve**: Complete all registrations before calling `Resolve()`
+* **Leverage type safety**: Use `MustGetAs[T]()`/`GetAs[T]()` instead of type assertions
+* **Handle cleanup**: Implement `Dtor` for resources that need cleanup
+* **Test with mocks**: Override dependencies for testing
 
 ### Documentation and examples
 
-Examples are live in [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi)
+Examples are live in [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi#pkg-examples)
 and also in the [example file](./container_example_test.go).
 
 ## Current state
@@ -78,8 +86,3 @@ Suggestions and feedback are always welcome.
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=eerzho/simpledi&type=Timeline)](https://www.star-history.com/#eerzho/simpledi&Timeline)
-
-## Alternatives
-
-- [goioc/di](https://github.com/goioc/di)
-- [sarulabs/dingo](https://github.com/sarulabs/dingo)

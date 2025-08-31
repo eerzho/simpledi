@@ -3,79 +3,174 @@
 package simpledi
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 )
 
-// Container is a DI container that stores created objects.
-// Dependency resolution is based on topological sorting.
+// Def describes the dependency.
+type Def struct {
+	// Key is a unique name for the dependency.
+	Key string
+	// Deps is a list of dependency keys that this dependency requires.
+	Deps []string
+	// Ctor is the constructor function that creates the dependency instance.
+	Ctor func() any
+	// Dtor is the destructor function that cleans up the dependency.
+	Dtor func() error
+}
+
+// Container manages dependencies.
 type Container struct {
 	mu           sync.Mutex
 	resolved     bool
 	objects      map[string]any
-	builders     map[string]func() any
 	dependencies map[string][]string
+	constructors map[string]func() any
+	destructors  map[string]func() error
 }
 
-// Creates a new DI container.
+// NewContainer creates a new container.
 func NewContainer() *Container {
 	return &Container{
 		objects:      make(map[string]any),
-		builders:     make(map[string]func() any),
 		dependencies: make(map[string][]string),
+		constructors: make(map[string]func() any),
+		destructors:  make(map[string]func() error),
 	}
 }
 
-// Register a dependency by key.
-//   - key:     unique name for the dependency
-//   - needs:   list of dependency keys this object depends on
-//   - builder: function that returns the object instance
-func (c *Container) Register(key string, deps []string, builder func() any) {
+// Register registers a dependency.
+//   - def: this is a dependency description
+func (c *Container) Register(def Def) error {
+	if def.Key == "" {
+		return errEmptyKey()
+	}
+	if def.Ctor == nil {
+		return errNilCtor(def.Key)
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.dependencies[key] = deps
-	c.builders[key] = builder
+
+	c.dependencies[def.Key] = def.Deps
+	c.constructors[def.Key] = def.Ctor
+	if def.Dtor != nil {
+		c.destructors[def.Key] = def.Dtor
+	}
 	c.resolved = false
+
+	return nil
 }
 
-// Get a dependency by key.
-//   - key: unique name of the dependency
-func (c *Container) Get(key string) (any, bool) {
+// MustRegister registers a dependency or panics on error.
+//   - def: this is a dependency description
+func (c *Container) MustRegister(def Def) {
+	if err := c.Register(def); err != nil {
+		panic(err)
+	}
+}
+
+// Get gets dependency.
+//   - key: this is a unique name for the dependency
+func (c *Container) Get(key string) (any, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	object, ok := c.objects[key]
-	return object, ok
+	if !ok {
+		return nil, errNotFound(key)
+	}
+	return object, nil
 }
 
-// Get a dependency by key or panics.
-//   - key: unique name of the dependency
+// MustGet gets dependency or panics on error.
+//   - key: this is a unique name for the dependency
 func (c *Container) MustGet(key string) any {
-	object, ok := c.Get(key)
-	if !ok {
-		panic(fmt.Sprintf("dependency [%s] not found", key))
+	object, err := c.Get(key)
+	if err != nil {
+		panic(err)
 	}
 	return object
 }
 
-// Resolve all dependencies.
+// Resolve resolves all dependencies.
 func (c *Container) Resolve() error {
+	c.mu.Lock()
+
 	if c.resolved {
+		c.mu.Unlock()
 		return nil
 	}
+
 	sorted, err := c.sort()
 	if err != nil {
+		c.mu.Unlock()
 		return err
 	}
-	if err := c.build(sorted); err != nil {
-		return err
+
+	for _, key := range sorted {
+		constructor := c.constructors[key]
+
+		c.mu.Unlock()
+		object := constructor()
+		c.mu.Lock()
+
+		c.objects[key] = object
 	}
 	c.resolved = true
+
+	c.mu.Unlock()
+
 	return nil
 }
 
-// Resolve all dependencies or panic.
+// MustResolve resolves all dependencies or panics on error.
 func (c *Container) MustResolve() {
 	if err := c.Resolve(); err != nil {
+		panic(err)
+	}
+}
+
+// Reset resets the container.
+func (c *Container) Reset() error {
+	c.mu.Lock()
+
+	if !c.resolved {
+		c.mu.Unlock()
+		return nil
+	}
+
+	sorted, _ := c.sort()
+
+	var errs []error
+	for i := len(sorted) - 1; i >= 0; i-- {
+		key := sorted[i]
+		if destructor, ok := c.destructors[key]; ok {
+			c.mu.Unlock()
+			if err := destructor(); err != nil {
+				errs = append(errs, err)
+			}
+			c.mu.Lock()
+		}
+	}
+
+	c.objects = make(map[string]any)
+	c.dependencies = make(map[string][]string)
+	c.constructors = make(map[string]func() any)
+	c.destructors = make(map[string]func() error)
+	c.resolved = false
+
+	c.mu.Unlock()
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}
+
+// MustReset resets the container or panics on error.
+func (c *Container) MustReset() {
+	if err := c.Reset(); err != nil {
 		panic(err)
 	}
 }
@@ -85,29 +180,34 @@ func (c *Container) sort() ([]string, error) {
 	if depsCount == 0 {
 		return nil, nil
 	}
+
 	inDegree := make(map[string]int, depsCount)
 	for key := range c.dependencies {
 		inDegree[key] = 0
 	}
+
 	for key, deps := range c.dependencies {
 		for _, dep := range deps {
 			if _, exists := c.dependencies[dep]; !exists {
-				return nil, fmt.Errorf("[%s] not declared", dep)
+				return nil, errMissingDep(key, dep)
 			}
 			inDegree[key]++
 		}
 	}
+
 	queue := make([]string, 0, depsCount)
 	for key, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, key)
 		}
 	}
+
 	sorted := make([]string, 0, depsCount)
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
 		sorted = append(sorted, current)
+
 		for key, deps := range c.dependencies {
 			for _, dep := range deps {
 				if dep == current {
@@ -120,6 +220,7 @@ func (c *Container) sort() ([]string, error) {
 			}
 		}
 	}
+
 	sortedCount := len(sorted)
 	if sortedCount != depsCount {
 		cycles := make([]string, 0, depsCount-sortedCount)
@@ -128,20 +229,8 @@ func (c *Container) sort() ([]string, error) {
 				cycles = append(cycles, key)
 			}
 		}
-		return nil, fmt.Errorf("cyclic detected: %v", cycles)
+		return nil, errCyclicDeps(cycles)
 	}
-	return sorted, nil
-}
 
-func (c *Container) build(keys []string) error {
-	for _, key := range keys {
-		c.mu.Lock()
-		builder := c.builders[key]
-		c.mu.Unlock()
-		if builder == nil {
-			return fmt.Errorf("[%s] builder is nil", key)
-		}
-		c.objects[key] = builder()
-	}
-	return nil
+	return sorted, nil
 }
