@@ -2,21 +2,18 @@ package simpledi
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
-type Definition struct {
-	ID        string
-	DependsOn []string
-	New       func() any
-	Close     func() error
-}
-
-type container struct {
-	resolved    bool
-	definitions []Definition
-	instances   map[string]any
-}
+var (
+	errContainerResolved      = errors.New("container already resolved")
+	errIDEmpty                = errors.New("ID is empty")
+	errConstructorRequired    = errors.New("constructor required")
+	errContainerNotResolved   = errors.New("container not resolved")
+	errNotFound               = errors.New("not found")
+	errCyclicDependency       = errors.New("cyclic dependency detected")
+)
 
 var ctr = sync.OnceValue(func() *container {
 	return &container{
@@ -25,60 +22,97 @@ var ctr = sync.OnceValue(func() *container {
 	}
 })
 
-// ResetForTesting сбрасывает контейнер для целей тестирования
-// ВАЖНО: Используйте только в тестах!
-func ResetForTesting() {
-	c := ctr()
-	c.definitions = make([]Definition, 0)
-	c.instances = make(map[string]any)
-	c.resolved = false
-}
-
-// GetDefinitionsForTesting возвращает список definitions в отсортированном порядке
-// ВАЖНО: Используйте только в тестах!
-func GetDefinitionsForTesting() []Definition {
-	return ctr().definitions
+type Definition struct {
+	ID    string
+	Deps  []string
+	New   func() any
+	Close func() error
 }
 
 func Set(d Definition) {
-	if d.ID == "" {
-		panic("empty id")
+	if err := ctr().set(d); err != nil {
+		panic(err)
 	}
-	if d.New == nil {
-		panic("empty new")
-	}
-	if ctr().resolved {
-		panic("container resolved")
-	}
-	ctr().definitions = append(ctr().definitions, d)
 }
 
 func Get[T any](id string) T {
-	if !ctr().resolved {
-		panic("container not resolved")
-	}
-	object, ok := ctr().instances[id]
-	if !ok {
-		panic("not found key")
+	object, err := ctr().get(id)
+	if err != nil {
+		panic(err)
 	}
 	typedObject, ok := object.(T)
 	if !ok {
-		panic("invalid type")
+		panic(fmt.Errorf("Get: %q type mismatch, got %T", id, object))
 	}
 	return typedObject
 }
 
 func Close() error {
-	if !ctr().resolved {
-		return errors.New("container not resolved")
-	}
+	return ctr().close()
+}
 
+func Resolve() {
+	if err := ctr().resolve(); err != nil {
+		panic(err)
+	}
+}
+
+type container struct {
+	resolved    bool
+	definitions []Definition
+	instances   map[string]any
+}
+
+func (c *container) set(d Definition) error {
+	if c.resolved {
+		return fmt.Errorf("set: container already resolved")
+	}
+	if d.ID == "" {
+		return fmt.Errorf("set: ID is empty")
+	}
+	if d.New == nil {
+		return fmt.Errorf("set: %q has no constructor", d.ID)
+	}
+	c.definitions = append(c.definitions, d)
+	return nil
+}
+
+func (c *container) get(id string) (any, error) {
+	if !c.resolved {
+		return nil, fmt.Errorf("get: container not resolved")
+	}
+	object, ok := c.instances[id]
+	if !ok {
+		return nil, fmt.Errorf("get: %q not found", id)
+	}
+	return object, nil
+}
+
+func (c *container) resolve() error {
+	if c.resolved {
+		return fmt.Errorf("resolve: already resolved")
+	}
+	if err := c.sort(); err != nil {
+		return err
+	}
+	for _, definition := range c.definitions {
+		instance := definition.New()
+		c.instances[definition.ID] = instance
+	}
+	c.resolved = true
+	return nil
+}
+
+func (c *container) close() error {
+	if !c.resolved {
+		return fmt.Errorf("close: not resolved")
+	}
 	errs := make([]error, 0)
-	for i := len(ctr().definitions) - 1; i >= 0; i-- {
-		definition := ctr().definitions[i]
+	for i := len(c.definitions) - 1; i >= 0; i-- {
+		definition := c.definitions[i]
 		if definition.Close != nil {
 			if err := definition.Close(); err != nil {
-				errs = append(errs, err)
+				errs = append(errs, fmt.Errorf("close: %q failed: %w", definition.ID, err))
 			}
 		}
 	}
@@ -88,57 +122,55 @@ func Close() error {
 	return nil
 }
 
-func Resolve() {
-	if ctr().resolved {
-		panic("container resolved")
-	}
-
-	err := ctr().sort()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, definition := range ctr().definitions {
-		instance := definition.New()
-		ctr().instances[definition.ID] = instance
-	}
-	ctr().resolved = true
-}
-
 func (c *container) sort() error {
-	queue := make([]Definition, 0, len(c.definitions))
+	definitionsCount := len(c.definitions)
+	if definitionsCount == 0 {
+		return nil
+	}
 
-	indegree := make(map[string]int)
-	graph := make(map[string][]Definition)
+	inDegree := make(map[string]int, definitionsCount)
 	for _, definition := range c.definitions {
-		count := len(definition.DependsOn)
-		if count == 0 {
+		inDegree[definition.ID] = len(definition.Deps)
+	}
+
+	queue := make([]Definition, 0, definitionsCount)
+	graph := make(map[string][]Definition, definitionsCount)
+	for _, definition := range c.definitions {
+		if inDegree[definition.ID] == 0 {
 			queue = append(queue, definition)
 			continue
 		}
-		indegree[definition.ID] = count
-		for _, depend := range definition.DependsOn {
-			graph[depend] = append(graph[depend], definition)
+		for _, dependency := range definition.Deps {
+			if _, ok := inDegree[dependency]; !ok {
+				return fmt.Errorf("sort: %q depends on %q which is not registered", definition.ID, dependency)
+			}
+			graph[dependency] = append(graph[dependency], definition)
 		}
 	}
 
-	definitions := make([]Definition, 0, len(c.definitions))
+	sortedDefinitions := make([]Definition, 0, definitionsCount)
 	for len(queue) > 0 {
 		definition := queue[0]
 		queue = queue[1:]
-		definitions = append(definitions, definition)
-		for _, subdefinition := range graph[definition.ID] {
-			indegree[subdefinition.ID]--
-			if indegree[subdefinition.ID] == 0 {
-				queue = append(queue, subdefinition)
+		sortedDefinitions = append(sortedDefinitions, definition)
+		for _, subDefinition := range graph[definition.ID] {
+			inDegree[subDefinition.ID]--
+			if inDegree[subDefinition.ID] == 0 {
+				queue = append(queue, subDefinition)
 			}
 		}
 	}
 
-	if len(c.definitions) != len(definitions) {
-		return errors.New("cyclic depends")
+	sortedDefinitionsCount := len(sortedDefinitions)
+	if definitionsCount != sortedDefinitionsCount {
+		cycles := make([]string, 0, definitionsCount-sortedDefinitionsCount)
+		for key, degree := range inDegree {
+			if degree > 0 {
+				cycles = append(cycles, key)
+			}
+		}
+		return fmt.Errorf("sort: cyclic dependency detected: %v", cycles)
 	}
-
-	c.definitions = definitions
+	c.definitions = sortedDefinitions
 	return nil
 }
