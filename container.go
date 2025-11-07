@@ -7,12 +7,15 @@ import (
 )
 
 var (
-	errContainerResolved      = errors.New("container already resolved")
-	errIDEmpty                = errors.New("ID is empty")
-	errConstructorRequired    = errors.New("constructor required")
-	errContainerNotResolved   = errors.New("container not resolved")
-	errNotFound               = errors.New("not found")
-	errCyclicDependency       = errors.New("cyclic dependency detected")
+	errIDEmpty              = errors.New("ID is empty")
+	errNotFound             = errors.New("not found")
+	errCyclicDependency     = errors.New("cyclic dependency detected")
+	errConstructorRequired  = errors.New("constructor required")
+	errContainerResolved    = errors.New("container already resolved")
+	errContainerNotResolved = errors.New("container not resolved")
+	errDuplicateID          = errors.New("duplicate ID")
+	errDependencyNotFound   = errors.New("dependency not registered")
+	errTypeMismatch         = errors.New("type mismatch")
 )
 
 var ctr = sync.OnceValue(func() *container {
@@ -42,7 +45,7 @@ func Get[T any](id string) T {
 	}
 	typedObject, ok := object.(T)
 	if !ok {
-		panic(fmt.Errorf("Get: %q type mismatch, got %T", id, object))
+		panic(fmt.Errorf("get: '%s' type mismatch, got %T", id, object))
 	}
 	return typedObject
 }
@@ -65,13 +68,13 @@ type container struct {
 
 func (c *container) set(d Definition) error {
 	if c.resolved {
-		return fmt.Errorf("set: container already resolved")
+		return fmt.Errorf("set: %w", errContainerResolved)
 	}
 	if d.ID == "" {
-		return fmt.Errorf("set: ID is empty")
+		return fmt.Errorf("set: %w", errIDEmpty)
 	}
 	if d.New == nil {
-		return fmt.Errorf("set: %q has no constructor", d.ID)
+		return fmt.Errorf("set: '%s' %w", d.ID, errConstructorRequired)
 	}
 	c.definitions = append(c.definitions, d)
 	return nil
@@ -79,18 +82,18 @@ func (c *container) set(d Definition) error {
 
 func (c *container) get(id string) (any, error) {
 	if !c.resolved {
-		return nil, fmt.Errorf("get: container not resolved")
+		return nil, fmt.Errorf("get: %w", errContainerNotResolved)
 	}
 	object, ok := c.instances[id]
 	if !ok {
-		return nil, fmt.Errorf("get: %q not found", id)
+		return nil, fmt.Errorf("get: '%s' %w", id, errNotFound)
 	}
 	return object, nil
 }
 
 func (c *container) resolve() error {
 	if c.resolved {
-		return fmt.Errorf("resolve: already resolved")
+		return fmt.Errorf("resolve: %w", errContainerResolved)
 	}
 	if err := c.sort(); err != nil {
 		return err
@@ -103,25 +106,6 @@ func (c *container) resolve() error {
 	return nil
 }
 
-func (c *container) close() error {
-	if !c.resolved {
-		return fmt.Errorf("close: not resolved")
-	}
-	errs := make([]error, 0)
-	for i := len(c.definitions) - 1; i >= 0; i-- {
-		definition := c.definitions[i]
-		if definition.Close != nil {
-			if err := definition.Close(); err != nil {
-				errs = append(errs, fmt.Errorf("close: %q failed: %w", definition.ID, err))
-			}
-		}
-	}
-	if len(errs) > 0 {
-		return errors.Join(errs...)
-	}
-	return nil
-}
-
 func (c *container) sort() error {
 	definitionsCount := len(c.definitions)
 	if definitionsCount == 0 {
@@ -130,6 +114,9 @@ func (c *container) sort() error {
 
 	inDegree := make(map[string]int, definitionsCount)
 	for _, definition := range c.definitions {
+		if _, ok := inDegree[definition.ID]; ok {
+			return fmt.Errorf("sort: '%s' %w", definition.ID, errDuplicateID)
+		}
 		inDegree[definition.ID] = len(definition.Deps)
 	}
 
@@ -142,7 +129,7 @@ func (c *container) sort() error {
 		}
 		for _, dependency := range definition.Deps {
 			if _, ok := inDegree[dependency]; !ok {
-				return fmt.Errorf("sort: %q depends on %q which is not registered", definition.ID, dependency)
+				return fmt.Errorf("sort: '%s' requires '%s' but %w", definition.ID, dependency, errDependencyNotFound)
 			}
 			graph[dependency] = append(graph[dependency], definition)
 		}
@@ -169,8 +156,31 @@ func (c *container) sort() error {
 				cycles = append(cycles, key)
 			}
 		}
-		return fmt.Errorf("sort: cyclic dependency detected: %v", cycles)
+		return fmt.Errorf("sort: %w %v", errCyclicDependency, cycles)
 	}
+
 	c.definitions = sortedDefinitions
+	return nil
+}
+
+func (c *container) close() error {
+	if c.resolved {
+		errs := make([]error, 0)
+		for i := len(c.definitions) - 1; i >= 0; i-- {
+			definition := c.definitions[i]
+			if definition.Close != nil {
+				if err := definition.Close(); err != nil {
+					errs = append(errs, fmt.Errorf("close: '%s' %w", definition.ID, err))
+				}
+			}
+		}
+		if len(errs) > 0 {
+			return errors.Join(errs...)
+		}
+	}
+
+	c.definitions = make([]Definition, 0)
+	c.instances = make(map[string]any)
+	c.resolved = false
 	return nil
 }
