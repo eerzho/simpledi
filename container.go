@@ -1,5 +1,3 @@
-// Package simpledi provides a simple dependency injection container for Go.
-// Zero dependencies, no reflection, no code generation.
 package simpledi
 
 import (
@@ -7,230 +5,140 @@ import (
 	"sync"
 )
 
-// Def describes the dependency.
-type Def struct {
-	// Key is a unique name for the dependency.
-	Key string
-	// Deps is a list of dependency keys that this dependency requires.
-	Deps []string
-	// Ctor is the constructor function that creates the dependency instance.
-	Ctor func() any
-	// Dtor is the destructor function that cleans up the dependency.
-	Dtor func() error
+type Definition struct {
+	ID        string
+	DependsOn []string
+	New       func() any
+	Close     func() error
 }
 
-// Container manages dependencies.
-type Container struct {
-	mu           sync.Mutex
-	resolved     bool
-	objects      map[string]any
-	dependencies map[string][]string
-	constructors map[string]func() any
-	destructors  map[string]func() error
+type container struct {
+	resolved    bool
+	definitions []Definition
+	instances   map[string]any
 }
 
-// NewContainer creates a new container.
-func NewContainer() *Container {
-	return &Container{
-		objects:      make(map[string]any),
-		dependencies: make(map[string][]string),
-		constructors: make(map[string]func() any),
-		destructors:  make(map[string]func() error),
+var ctr = sync.OnceValue(func() *container {
+	return &container{
+		definitions: make([]Definition, 0),
+		instances:   make(map[string]any),
 	}
-}
+})
 
-// Register registers a dependency.
-//   - def: this is a dependency description
-func (c *Container) Register(def Def) error {
-	if def.Key == "" {
-		return errEmptyKey()
-	}
-	if def.Ctor == nil {
-		return errNilCtor(def.Key)
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.dependencies[def.Key] = def.Deps
-	c.constructors[def.Key] = def.Ctor
-	if def.Dtor != nil {
-		c.destructors[def.Key] = def.Dtor
-	}
+// ResetForTesting сбрасывает контейнер для целей тестирования
+// ВАЖНО: Используйте только в тестах!
+func ResetForTesting() {
+	c := ctr()
+	c.definitions = make([]Definition, 0)
+	c.instances = make(map[string]any)
 	c.resolved = false
-
-	return nil
 }
 
-// MustRegister registers a dependency or panics on error.
-//   - def: this is a dependency description
-func (c *Container) MustRegister(def Def) {
-	if err := c.Register(def); err != nil {
-		panic(err)
+// GetDefinitionsForTesting возвращает список definitions в отсортированном порядке
+// ВАЖНО: Используйте только в тестах!
+func GetDefinitionsForTesting() []Definition {
+	return ctr().definitions
+}
+
+func Set(d Definition) {
+	if d.ID == "" {
+		panic("empty id")
 	}
+	if d.New == nil {
+		panic("empty new")
+	}
+	if ctr().resolved {
+		panic("container resolved")
+	}
+	ctr().definitions = append(ctr().definitions, d)
 }
 
-// Get gets dependency.
-//   - key: this is a unique name for the dependency
-func (c *Container) Get(key string) (any, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	object, ok := c.objects[key]
+func Get[T any](id string) T {
+	if !ctr().resolved {
+		panic("container not resolved")
+	}
+	object, ok := ctr().instances[id]
 	if !ok {
-		return nil, errNotFound(key)
+		panic("not found key")
 	}
-	return object, nil
+	typedObject, ok := object.(T)
+	if !ok {
+		panic("invalid type")
+	}
+	return typedObject
 }
 
-// MustGet gets dependency or panics on error.
-//   - key: this is a unique name for the dependency
-func (c *Container) MustGet(key string) any {
-	object, err := c.Get(key)
-	if err != nil {
-		panic(err)
-	}
-	return object
-}
-
-// Resolve resolves all dependencies.
-func (c *Container) Resolve() error {
-	c.mu.Lock()
-
-	if c.resolved {
-		c.mu.Unlock()
-		return nil
+func Close() error {
+	if !ctr().resolved {
+		return errors.New("container not resolved")
 	}
 
-	sorted, err := c.sort()
-	if err != nil {
-		c.mu.Unlock()
-		return err
-	}
-
-	for _, key := range sorted {
-		constructor := c.constructors[key]
-
-		c.mu.Unlock()
-		object := constructor()
-		c.mu.Lock()
-
-		c.objects[key] = object
-	}
-	c.resolved = true
-
-	c.mu.Unlock()
-
-	return nil
-}
-
-// MustResolve resolves all dependencies or panics on error.
-func (c *Container) MustResolve() {
-	if err := c.Resolve(); err != nil {
-		panic(err)
-	}
-}
-
-// Reset resets the container.
-func (c *Container) Reset() error {
-	c.mu.Lock()
-
-	if !c.resolved {
-		c.mu.Unlock()
-		return nil
-	}
-
-	sorted, _ := c.sort()
-
-	var errs []error
-	for i := len(sorted) - 1; i >= 0; i-- {
-		key := sorted[i]
-		if destructor, ok := c.destructors[key]; ok {
-			c.mu.Unlock()
-			if err := destructor(); err != nil {
+	errs := make([]error, 0)
+	for i := len(ctr().definitions) - 1; i >= 0; i-- {
+		definition := ctr().definitions[i]
+		if definition.Close != nil {
+			if err := definition.Close(); err != nil {
 				errs = append(errs, err)
 			}
-			c.mu.Lock()
 		}
 	}
-
-	c.objects = make(map[string]any)
-	c.dependencies = make(map[string][]string)
-	c.constructors = make(map[string]func() any)
-	c.destructors = make(map[string]func() error)
-	c.resolved = false
-
-	c.mu.Unlock()
-
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
 	return nil
 }
 
-// MustReset resets the container or panics on error.
-func (c *Container) MustReset() {
-	if err := c.Reset(); err != nil {
+func Resolve() {
+	if ctr().resolved {
+		panic("container resolved")
+	}
+
+	err := ctr().sort()
+	if err != nil {
 		panic(err)
 	}
+
+	for _, definition := range ctr().definitions {
+		instance := definition.New()
+		ctr().instances[definition.ID] = instance
+	}
+	ctr().resolved = true
 }
 
-func (c *Container) sort() ([]string, error) {
-	depsCount := len(c.dependencies)
-	if depsCount == 0 {
-		return nil, nil
-	}
+func (c *container) sort() error {
+	queue := make([]Definition, 0, len(c.definitions))
 
-	inDegree := make(map[string]int, depsCount)
-	for key := range c.dependencies {
-		inDegree[key] = 0
-	}
-
-	for key, deps := range c.dependencies {
-		for _, dep := range deps {
-			if _, exists := c.dependencies[dep]; !exists {
-				return nil, errMissingDep(key, dep)
-			}
-			inDegree[key]++
+	indegree := make(map[string]int)
+	graph := make(map[string][]Definition)
+	for _, definition := range c.definitions {
+		count := len(definition.DependsOn)
+		if count == 0 {
+			queue = append(queue, definition)
+			continue
+		}
+		indegree[definition.ID] = count
+		for _, depend := range definition.DependsOn {
+			graph[depend] = append(graph[depend], definition)
 		}
 	}
 
-	queue := make([]string, 0, depsCount)
-	for key, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, key)
-		}
-	}
-
-	sorted := make([]string, 0, depsCount)
+	definitions := make([]Definition, 0, len(c.definitions))
 	for len(queue) > 0 {
-		current := queue[0]
+		definition := queue[0]
 		queue = queue[1:]
-		sorted = append(sorted, current)
-
-		for key, deps := range c.dependencies {
-			for _, dep := range deps {
-				if dep == current {
-					inDegree[key]--
-					if inDegree[key] == 0 {
-						queue = append(queue, key)
-					}
-					break
-				}
+		definitions = append(definitions, definition)
+		for _, subdefinition := range graph[definition.ID] {
+			indegree[subdefinition.ID]--
+			if indegree[subdefinition.ID] == 0 {
+				queue = append(queue, subdefinition)
 			}
 		}
 	}
 
-	sortedCount := len(sorted)
-	if sortedCount != depsCount {
-		cycles := make([]string, 0, depsCount-sortedCount)
-		for key, degree := range inDegree {
-			if degree > 0 {
-				cycles = append(cycles, key)
-			}
-		}
-		return nil, errCyclicDeps(cycles)
+	if len(c.definitions) != len(definitions) {
+		return errors.New("cyclic depends")
 	}
 
-	return sorted, nil
+	c.definitions = definitions
+	return nil
 }
