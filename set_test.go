@@ -54,3 +54,20 @@ func Test_Set_Container_Resolved(t *testing.T) {
 		})
 	}, simpledi.ErrContainerResolved)
 }
+
+func Test_Set_Nil_Close_Allowed(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "yeast",
+			New: func() any {
+				return "yeast"
+			},
+			Close: nil,
+		})
+	})
+}
+
+func Test_Set_With_Deps_Missing_New(t *testing.T) {
+}
