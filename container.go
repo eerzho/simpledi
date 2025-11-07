@@ -3,7 +3,6 @@ package simpledi
 import (
 	"errors"
 	"fmt"
-	"sync"
 )
 
 var (
@@ -17,53 +16,6 @@ var (
 	ErrDependencyCycle      = errors.New("Dependency cycle detected")
 	ErrTypeMismatch         = errors.New("Type mismatch")
 )
-
-var ctr = sync.OnceValue(func() *container {
-	return &container{
-		definitions: make([]Definition, 0),
-		instances:   make(map[string]any),
-	}
-})
-
-type Definition struct {
-	ID    string
-	Deps  []string
-	New   func() any
-	Close func() error
-}
-
-func Set(d Definition) {
-	if err := ctr().set(d); err != nil {
-		panic(err)
-	}
-}
-
-func Get[T any](id string) T {
-	const op = "simpledi.get"
-
-	var zero T
-	object, err := ctr().get(id)
-	if err != nil {
-		panic(err)
-	}
-	typedObject, ok := object.(T)
-	if !ok {
-		err := fmt.Errorf("%s: %w (ID: %s, Want: %T, Got: %T)", op, ErrTypeMismatch, id, zero, object)
-		panic(err)
-	}
-
-	return typedObject
-}
-
-func Resolve() {
-	if err := ctr().resolve(); err != nil {
-		panic(err)
-	}
-}
-
-func Close() error {
-	return ctr().close()
-}
 
 type container struct {
 	resolved    bool
@@ -93,6 +45,9 @@ func (c *container) get(id string) (any, error) {
 
 	if !c.resolved {
 		return nil, fmt.Errorf("%s: %w", op, ErrContainerNotResolved)
+	}
+	if id == "" {
+		return nil, fmt.Errorf("%s: %w", op, ErrIDRequired)
 	}
 	object, ok := c.instances[id]
 	if !ok {
@@ -152,9 +107,9 @@ func (c *container) sort() error {
 	}
 
 	sortedDefinitions := make([]Definition, 0, definitionsCount)
-	for len(queue) > 0 {
-		definition := queue[0]
-		queue = queue[1:]
+	queueIdx := 0
+	for queueIdx < len(queue) {
+		definition := queue[queueIdx]
 		sortedDefinitions = append(sortedDefinitions, definition)
 		for _, subDefinition := range graph[definition.ID] {
 			inDegree[subDefinition.ID]--
@@ -162,6 +117,7 @@ func (c *container) sort() error {
 				queue = append(queue, subDefinition)
 			}
 		}
+		queueIdx++
 	}
 
 	sortedDefinitionsCount := len(sortedDefinitions)
@@ -183,8 +139,8 @@ func (c *container) sort() error {
 func (c *container) close() error {
 	const op = "simpledi.close"
 
+	errs := make([]error, 0)
 	if c.resolved {
-		errs := make([]error, 0)
 		for i := len(c.definitions) - 1; i >= 0; i-- {
 			definition := c.definitions[i]
 			if definition.Close != nil {
@@ -193,14 +149,15 @@ func (c *container) close() error {
 				}
 			}
 		}
-		if len(errs) > 0 {
-			return errors.Join(errs...)
-		}
 	}
 
 	c.definitions = make([]Definition, 0)
 	c.instances = make(map[string]any)
 	c.resolved = false
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
 
 	return nil
 }
