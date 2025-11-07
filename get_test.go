@@ -58,3 +58,54 @@ func Test_Get_Container_Not_Resolved(t *testing.T) {
 		_ = simpledi.Get[string]("yeast")
 	}, simpledi.ErrContainerNotResolved)
 }
+
+func Test_Get_Empty_String_ID(t *testing.T) {
+	defer simpledi.Close()
+	simpledi.Resolve()
+
+	assertPanic(t, func() {
+		simpledi.Get[string]("")
+	}, simpledi.ErrIDRequired)
+}
+
+func Test_Get_Multiple_Types_Same_ID(t *testing.T) {
+
+}
+
+func Test_Get_After_Close(t *testing.T) {
+	defer simpledi.Close()
+	simpledi.Set(simpledi.Definition{
+		ID: "yeast",
+		New: func() any {
+			return "yeast"
+		},
+	})
+	simpledi.Resolve()
+	simpledi.Close()
+
+	assertPanic(t, func() {
+		simpledi.Get[string]("yeast")
+	}, simpledi.ErrContainerNotResolved)
+}
+
+func Test_Get_Same_Instance_Returned(t *testing.T) {
+	defer simpledi.Close()
+	type service struct {
+		data string
+	}
+	simpledi.Set(simpledi.Definition{
+		ID: "service",
+		New: func() any {
+			return &service{data: "some data"}
+		},
+	})
+	simpledi.Resolve()
+
+	first := simpledi.Get[*service]("service")
+	second := simpledi.Get[*service]("service")
+	assertSameInstance(t, first, second)
+}
+
+func Test_Get_Nil_Value(t *testing.T) {
+
+}
