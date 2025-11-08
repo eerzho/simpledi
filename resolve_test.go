@@ -83,9 +83,7 @@ func Test_Resolve_Empty_Container(t *testing.T) {
 func Test_Resolve_Execution_Order(t *testing.T) {
 	defer simpledi.Close()
 
-	// Track the order of New() calls
 	var executionOrder []string
-
 	simpledi.Set(simpledi.Definition{
 		ID: "base",
 		New: func() any {
@@ -93,7 +91,6 @@ func Test_Resolve_Execution_Order(t *testing.T) {
 			return "base"
 		},
 	})
-
 	simpledi.Set(simpledi.Definition{
 		ID:   "level1",
 		Deps: []string{"base"},
@@ -102,7 +99,6 @@ func Test_Resolve_Execution_Order(t *testing.T) {
 			return "level1"
 		},
 	})
-
 	simpledi.Set(simpledi.Definition{
 		ID:   "level2",
 		Deps: []string{"level1"},
@@ -111,7 +107,6 @@ func Test_Resolve_Execution_Order(t *testing.T) {
 			return "level2"
 		},
 	})
-
 	simpledi.Set(simpledi.Definition{
 		ID:   "level3",
 		Deps: []string{"level2"},
@@ -120,10 +115,8 @@ func Test_Resolve_Execution_Order(t *testing.T) {
 			return "level3"
 		},
 	})
-
 	simpledi.Resolve()
 
-	// Verify New() was called in correct topological order: base -> level1 -> level2 -> level3
 	if len(executionOrder) != 4 {
 		t.Errorf("got: %d executions, want: 4", len(executionOrder))
 		return

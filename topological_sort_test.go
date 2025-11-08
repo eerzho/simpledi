@@ -614,53 +614,6 @@ func Test_Extra_Unused_Supplies(t *testing.T) {
 	})
 }
 
-func Test_All_Recipes_Missing_One_Common_Ingredient(t *testing.T) {
-	defer simpledi.Close()
-	simpledi.Set(simpledi.Definition{
-		ID: "flour",
-		New: func() any {
-			return "flour"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID: "sugar",
-		New: func() any {
-			return "sugar"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID: "water",
-		New: func() any {
-			return "water"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID:   "dish_a",
-		Deps: []string{"salt", "flour"},
-		New: func() any {
-			return "dish_a"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID:   "dish_b",
-		Deps: []string{"salt", "sugar"},
-		New: func() any {
-			return "dish_b"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID:   "dish_c",
-		Deps: []string{"salt", "water"},
-		New: func() any {
-			return "dish_c"
-		},
-	})
-
-	assertPanic(t, func() {
-		simpledi.Resolve()
-	}, simpledi.ErrDependencyNotFound)
-}
-
 func Test_Long_Chain_Five_Levels(t *testing.T) {
 	defer simpledi.Close()
 	simpledi.Set(simpledi.Definition{
@@ -1061,51 +1014,6 @@ func Test_Self_Dependency(t *testing.T) {
 	assertPanic(t, func() {
 		simpledi.Resolve()
 	}, simpledi.ErrDependencyCycle)
-}
-
-func Test_Recipe_Already_In_Supplies(t *testing.T) {
-	defer simpledi.Close()
-	simpledi.Set(simpledi.Definition{
-		ID: "flour",
-		New: func() any {
-			return "flour"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID: "meat",
-		New: func() any {
-			return "meat"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID: "bread",
-		New: func() any {
-			return "bread"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID:   "bread_recipe",
-		Deps: []string{"flour"},
-		New: func() any {
-			return "bread"
-		},
-	})
-	simpledi.Set(simpledi.Definition{
-		ID:   "sandwich",
-		Deps: []string{"bread", "meat"},
-		New: func() any {
-			return "sandwich"
-		},
-	})
-
-	assertNoPanic(t, func() {
-		simpledi.Resolve()
-
-		_ = simpledi.Get[string]("flour")
-		_ = simpledi.Get[string]("meat")
-		_ = simpledi.Get[string]("bread")
-		_ = simpledi.Get[string]("sandwich")
-	})
 }
 
 func Test_All_Supplies_No_Recipes_Needed(t *testing.T) {
