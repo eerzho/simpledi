@@ -69,5 +69,16 @@ func Test_Set_Nil_Close_Allowed(t *testing.T) {
 	})
 }
 
-func Test_Set_With_Deps_Missing_New(t *testing.T) {
+func Test_Set_After_Close(t *testing.T) {
+	defer simpledi.Close()
+
+	simpledi.Close()
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "yeast",
+			New: func() any {
+				return "yeast"
+			},
+		})
+	})
 }
