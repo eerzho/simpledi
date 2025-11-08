@@ -51,14 +51,6 @@ func Test_Get_Type_Mismatch(t *testing.T) {
 	}, simpledi.ErrTypeMismatch)
 }
 
-func Test_Get_Container_Not_Resolved(t *testing.T) {
-	defer simpledi.Close()
-
-	assertPanic(t, func() {
-		_ = simpledi.Get[string]("yeast")
-	}, simpledi.ErrContainerNotResolved)
-}
-
 func Test_Get_Empty_String_ID(t *testing.T) {
 	defer simpledi.Close()
 	simpledi.Resolve()
@@ -66,10 +58,6 @@ func Test_Get_Empty_String_ID(t *testing.T) {
 	assertPanic(t, func() {
 		simpledi.Get[string]("")
 	}, simpledi.ErrIDRequired)
-}
-
-func Test_Get_Multiple_Types_Same_ID(t *testing.T) {
-
 }
 
 func Test_Get_After_Close(t *testing.T) {
@@ -85,7 +73,7 @@ func Test_Get_After_Close(t *testing.T) {
 
 	assertPanic(t, func() {
 		simpledi.Get[string]("yeast")
-	}, simpledi.ErrContainerNotResolved)
+	}, simpledi.ErrIDNotFound)
 }
 
 func Test_Get_Same_Instance_Returned(t *testing.T) {
@@ -106,6 +94,68 @@ func Test_Get_Same_Instance_Returned(t *testing.T) {
 	assertSameInstance(t, first, second)
 }
 
-func Test_Get_Nil_Value(t *testing.T) {
+func Test_Get_During_Resolve(t *testing.T) {
+	defer simpledi.Close()
 
+	type Repository struct {
+		name string
+	}
+
+	type Service struct {
+		repo *Repository
+	}
+
+	type Controller struct {
+		service *Service
+	}
+
+	simpledi.Set(simpledi.Definition{
+		ID: "repository",
+		New: func() any {
+			return &Repository{name: "user_db"}
+		},
+	})
+
+	simpledi.Set(simpledi.Definition{
+		ID:   "service",
+		Deps: []string{"repository"},
+		New: func() any {
+			repo := simpledi.Get[*Repository]("repository")
+			return &Service{repo: repo}
+		},
+	})
+
+	simpledi.Set(simpledi.Definition{
+		ID:   "controller",
+		Deps: []string{"service"},
+		New: func() any {
+			svc := simpledi.Get[*Service]("service")
+			return &Controller{service: svc}
+		},
+	})
+
+	simpledi.Resolve()
+
+	assertNoPanic(t, func() {
+		repo := simpledi.Get[*Repository]("repository")
+		if repo.name != "user_db" {
+			t.Errorf("got: %s, want: user_db", repo.name)
+		}
+
+		svc := simpledi.Get[*Service]("service")
+		if svc.repo == nil {
+			t.Errorf("got: nil, want: *Repository")
+		}
+		if svc.repo.name != "user_db" {
+			t.Errorf("got: %s, want: user_db", svc.repo.name)
+		}
+
+		ctrl := simpledi.Get[*Controller]("controller")
+		if ctrl.service == nil {
+			t.Errorf("got: nil, want: *Service")
+		}
+		if ctrl.service.repo == nil {
+			t.Errorf("got: nil, want: *Repository")
+		}
+	})
 }
