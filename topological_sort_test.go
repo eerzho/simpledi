@@ -1,43 +1,11 @@
 package simpledi_test
 
 import (
-	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/eerzho/simpledi"
 )
-
-func assertPanic(t *testing.T, fn func(), want error) {
-	t.Helper()
-	defer func() {
-		r := recover()
-		if r == nil {
-			t.Errorf("got: no panic, want: panic(%v)", want)
-			return
-		}
-
-		err, ok := r.(error)
-		if !ok {
-			t.Errorf("got: %T, want: error", r)
-			return
-		}
-
-		if !errors.Is(err, want) {
-			t.Errorf("got: %v, want: %v", err, want)
-		}
-	}()
-	fn()
-}
-
-func assertNoPanic(t *testing.T, fn func()) {
-	t.Helper()
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("got: panic(%v), want: no panic", r)
-		}
-	}()
-	fn()
-}
 
 func Test_Basic_Single_Recipe_Available(t *testing.T) {
 	defer simpledi.Close()
@@ -1172,4 +1140,90 @@ func Test_All_Supplies_No_Recipes_Needed(t *testing.T) {
 	assertPanic(t, func() {
 		simpledi.Resolve()
 	}, simpledi.ErrIDDuplicate)
+}
+
+func Test_Resolve_Large_Number_Of_Definitions(t *testing.T) {
+	defer simpledi.Close()
+
+	for i := 0; i < 1000; i++ {
+		id := fmt.Sprintf("ingredient_%d", i)
+		simpledi.Set(simpledi.Definition{
+			ID: id,
+			New: func() any {
+				return id
+			},
+		})
+	}
+	simpledi.Resolve()
+
+	assertNoPanic(t, func() {
+		_ = simpledi.Get[string]("ingredient_0")
+		_ = simpledi.Get[string]("ingredient_500")
+		_ = simpledi.Get[string]("ingredient_999")
+	})
+}
+
+func Test_Resolve_Deep_Dependency_Chain(t *testing.T) {
+	defer simpledi.Close()
+
+	simpledi.Set(simpledi.Definition{
+		ID: "level0",
+		New: func() any {
+			return "level0"
+		},
+	})
+	for i := 1; i < 50; i++ {
+		prevID := fmt.Sprintf("level%d", i-1)
+		currID := fmt.Sprintf("level%d", i)
+		prevIDCopy := prevID
+		currIDCopy := currID
+		simpledi.Set(simpledi.Definition{
+			ID:   currIDCopy,
+			Deps: []string{prevIDCopy},
+			New: func() any {
+				return currIDCopy
+			},
+		})
+	}
+	simpledi.Resolve()
+
+	assertNoPanic(t, func() {
+		_ = simpledi.Get[string]("level0")
+		_ = simpledi.Get[string]("level25")
+		_ = simpledi.Get[string]("level49")
+	})
+}
+
+func Test_Resolve_Wide_Dependency_Graph(t *testing.T) {
+	defer simpledi.Close()
+
+	baseCount := 100
+	for i := 0; i < baseCount; i++ {
+		id := fmt.Sprintf("base_%d", i)
+		simpledi.Set(simpledi.Definition{
+			ID: id,
+			New: func() any {
+				return id
+			},
+		})
+	}
+	deps := make([]string, baseCount)
+	for i := 0; i < baseCount; i++ {
+		deps[i] = fmt.Sprintf("base_%d", i)
+	}
+	simpledi.Set(simpledi.Definition{
+		ID:   "mega_dish",
+		Deps: deps,
+		New: func() any {
+			return "mega_dish"
+		},
+	})
+	simpledi.Resolve()
+
+	assertNoPanic(t, func() {
+		_ = simpledi.Get[string]("base_0")
+		_ = simpledi.Get[string]("base_50")
+		_ = simpledi.Get[string]("base_99")
+		_ = simpledi.Get[string]("mega_dish")
+	})
 }
