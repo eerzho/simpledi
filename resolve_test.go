@@ -81,7 +81,65 @@ func Test_Resolve_Empty_Container(t *testing.T) {
 }
 
 func Test_Resolve_Execution_Order(t *testing.T) {
+	defer simpledi.Close()
 
+	// Track the order of New() calls
+	var executionOrder []string
+
+	simpledi.Set(simpledi.Definition{
+		ID: "base",
+		New: func() any {
+			executionOrder = append(executionOrder, "base")
+			return "base"
+		},
+	})
+
+	simpledi.Set(simpledi.Definition{
+		ID:   "level1",
+		Deps: []string{"base"},
+		New: func() any {
+			executionOrder = append(executionOrder, "level1")
+			return "level1"
+		},
+	})
+
+	simpledi.Set(simpledi.Definition{
+		ID:   "level2",
+		Deps: []string{"level1"},
+		New: func() any {
+			executionOrder = append(executionOrder, "level2")
+			return "level2"
+		},
+	})
+
+	simpledi.Set(simpledi.Definition{
+		ID:   "level3",
+		Deps: []string{"level2"},
+		New: func() any {
+			executionOrder = append(executionOrder, "level3")
+			return "level3"
+		},
+	})
+
+	simpledi.Resolve()
+
+	// Verify New() was called in correct topological order: base -> level1 -> level2 -> level3
+	if len(executionOrder) != 4 {
+		t.Errorf("got: %d executions, want: 4", len(executionOrder))
+		return
+	}
+	if executionOrder[0] != "base" {
+		t.Errorf("got: %s, want: base (first)", executionOrder[0])
+	}
+	if executionOrder[1] != "level1" {
+		t.Errorf("got: %s, want: level1 (second)", executionOrder[1])
+	}
+	if executionOrder[2] != "level2" {
+		t.Errorf("got: %s, want: level2 (third)", executionOrder[2])
+	}
+	if executionOrder[3] != "level3" {
+		t.Errorf("got: %s, want: level3 (fourth)", executionOrder[3])
+	}
 }
 
 func Test_Resolve_After_Close_And_Reset(t *testing.T) {
@@ -120,6 +178,42 @@ func Test_Resolve_No_Dependencies(t *testing.T) {
 	})
 }
 
-func Test_Resolve_Panicking_New_Function(t *testing.T) {
+func Test_Multiple_Resolve_Calls_After_Close(t *testing.T) {
+	defer simpledi.Close()
 
+	simpledi.Close()
+	simpledi.Resolve()
+	assertPanic(t, func() {
+		simpledi.Resolve()
+	}, simpledi.ErrContainerResolved)
+}
+
+func Test_Circular_Dependency_Three_Way_Cycle(t *testing.T) {
+	defer simpledi.Close()
+
+	simpledi.Set(simpledi.Definition{
+		ID:   "A",
+		Deps: []string{"B"},
+		New: func() any {
+			return "A"
+		},
+	})
+	simpledi.Set(simpledi.Definition{
+		ID:   "B",
+		Deps: []string{"C"},
+		New: func() any {
+			return "B"
+		},
+	})
+	simpledi.Set(simpledi.Definition{
+		ID:   "C",
+		Deps: []string{"A"},
+		New: func() any {
+			return "C"
+		},
+	})
+
+	assertPanic(t, func() {
+		simpledi.Resolve()
+	}, simpledi.ErrDependencyCycle)
 }
