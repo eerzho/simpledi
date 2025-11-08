@@ -43,9 +43,6 @@ func (c *container) set(d Definition) error {
 func (c *container) get(id string) (any, error) {
 	const op = "simpledi.get"
 
-	if !c.resolved {
-		return nil, fmt.Errorf("%s: %w", op, ErrContainerNotResolved)
-	}
 	if id == "" {
 		return nil, fmt.Errorf("%s: %w", op, ErrIDRequired)
 	}
