@@ -46,12 +46,12 @@ func (c *container) get(id string) (any, error) {
 	if id == "" {
 		return nil, fmt.Errorf("%s: %w", op, ErrIDRequired)
 	}
-	object, ok := c.instances[id]
+	instance, ok := c.instances[id]
 	if !ok {
 		return nil, fmt.Errorf("%s: %w (ID: %s)", op, ErrIDNotFound, id)
 	}
 
-	return object, nil
+	return instance, nil
 }
 
 func (c *container) resolve() error {

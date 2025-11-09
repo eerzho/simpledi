@@ -29,17 +29,20 @@ func Get[T any](id string) T {
 	const op = "simpledi.get"
 
 	var zero T
-	object, err := ctr().get(id)
+	instance, err := ctr().get(id)
 	if err != nil {
 		panic(err)
 	}
-	typedObject, ok := object.(T)
+	if instance == nil {
+		return zero
+	}
+	typedInstance, ok := instance.(T)
 	if !ok {
-		err := fmt.Errorf("%s: %w (ID: %s, Want: %T, Got: %T)", op, ErrTypeMismatch, id, zero, object)
+		err := fmt.Errorf("%s: %w (ID: %s, Want: %T, Got: %T)", op, ErrTypeMismatch, id, zero, instance)
 		panic(err)
 	}
 
-	return typedObject
+	return typedInstance
 }
 
 func Resolve() {
