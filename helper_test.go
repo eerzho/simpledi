@@ -5,7 +5,30 @@ import (
 	"testing"
 )
 
-func assertSameInstance[T comparable](t *testing.T, got, want *T) {
+func assertOrder[T comparable](t *testing.T, got, want []T) {
+	t.Helper()
+	gotCount, wantCount := len(got), len(want)
+	if len(got) != len(want) {
+		t.Errorf("got: %d count, want: %d count", gotCount, wantCount)
+		return
+	}
+	for i := 0; i < gotCount; i++ {
+		if got[i] != want[i] {
+			t.Errorf("[%d] got: %v, want: %v", i, got[i], want[i])
+			t.Errorf("got: %#v, want: %#v", got, want)
+			return
+		}
+	}
+}
+
+func assertSameValue[T comparable](t *testing.T, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Errorf("got: %v, want: %v", got, want)
+	}
+}
+
+func assertSamePointer[T comparable](t *testing.T, got, want *T) {
 	t.Helper()
 	if got != want {
 		t.Errorf("got: %p, want: %p", got, want)
