@@ -5,6 +5,13 @@ import (
 	"testing"
 )
 
+type testService1 interface{ doSomething1() }
+type testServiceImpl1 struct{}
+
+func (t *testServiceImpl1) doSomething1() {}
+
+type testServiceImpl2 struct{ data string }
+
 func assertOrder[T comparable](t *testing.T, got, want []T) {
 	t.Helper()
 	gotCount, wantCount := len(got), len(want)
