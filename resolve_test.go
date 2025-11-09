@@ -6,7 +6,7 @@ import (
 	"github.com/eerzho/simpledi"
 )
 
-func Test_Single_Recipe_All_Ingredients_Available(t *testing.T) {
+func Test_Resolve_Single_Recipe_All_Ingredients_Available(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -45,7 +45,7 @@ func Test_Single_Recipe_All_Ingredients_Available(t *testing.T) {
 	})
 }
 
-func Test_Single_Recipe_Missing_One_Ingredient(t *testing.T) {
+func Test_Resolve_Single_Recipe_Missing_One_Ingredient(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -65,7 +65,7 @@ func Test_Single_Recipe_Missing_One_Ingredient(t *testing.T) {
 	}, simpledi.ErrDependencyNotFound)
 }
 
-func Test_Chain_Two_Levels_Complete(t *testing.T) {
+func Test_Resolve_Chain_Two_Levels_Complete(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -121,7 +121,7 @@ func Test_Chain_Two_Levels_Complete(t *testing.T) {
 	})
 }
 
-func Test_Chain_Two_Levels_Broken(t *testing.T) {
+func Test_Resolve_Chain_Two_Levels_Broken(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -142,7 +142,7 @@ func Test_Chain_Two_Levels_Broken(t *testing.T) {
 	}, simpledi.ErrDependencyNotFound)
 }
 
-func Test_Multiple_Independent_All_Available(t *testing.T) {
+func Test_Resolve_Multiple_Independent_All_Available(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -231,7 +231,7 @@ func Test_Multiple_Independent_All_Available(t *testing.T) {
 	})
 }
 
-func Test_Multiple_Independent_Partial_Available(t *testing.T) {
+func Test_Resolve_Multiple_Independent_Partial_Available(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -273,7 +273,7 @@ func Test_Multiple_Independent_Partial_Available(t *testing.T) {
 	}, simpledi.ErrDependencyNotFound)
 }
 
-func Test_Empty_Supplies_List(t *testing.T) {
+func Test_Resolve_Empty_Supplies_List(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -289,7 +289,7 @@ func Test_Empty_Supplies_List(t *testing.T) {
 	}, simpledi.ErrDependencyNotFound)
 }
 
-func Test_Empty_Recipes_List(t *testing.T) {
+func Test_Resolve_Empty_Recipes_List(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -300,7 +300,7 @@ func Test_Empty_Recipes_List(t *testing.T) {
 	assertOrder(t, order, []string{})
 }
 
-func Test_Circular_Dependency_Two_Recipes(t *testing.T) {
+func Test_Resolve_Circular_Dependency_Two_Recipes(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -329,7 +329,7 @@ func Test_Circular_Dependency_Two_Recipes(t *testing.T) {
 	}, simpledi.ErrDependencyCycle)
 }
 
-func Test_Chain_Three_Levels_Complete(t *testing.T) {
+func Test_Resolve_Chain_Three_Levels_Complete(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -394,7 +394,7 @@ func Test_Chain_Three_Levels_Complete(t *testing.T) {
 	})
 }
 
-func Test_Diamond_Dependency_Pattern(t *testing.T) {
+func Test_Resolve_Diamond_Dependency_Pattern(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -468,7 +468,7 @@ func Test_Diamond_Dependency_Pattern(t *testing.T) {
 	})
 }
 
-func Test_Same_Ingredient_Multiple_Recipes(t *testing.T) {
+func Test_Resolve_Same_Ingredient_Multiple_Recipes(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -541,7 +541,7 @@ func Test_Same_Ingredient_Multiple_Recipes(t *testing.T) {
 	})
 }
 
-func Test_Recipe_Used_Multiple_Times_In_Another(t *testing.T) {
+func Test_Resolve_Recipe_Used_Multiple_Times_In_Another(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -589,7 +589,7 @@ func Test_Recipe_Used_Multiple_Times_In_Another(t *testing.T) {
 	})
 }
 
-func Test_Extra_Unused_Supplies_Present(t *testing.T) {
+func Test_Resolve_Extra_Unused_Supplies_Present(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -648,7 +648,7 @@ func Test_Extra_Unused_Supplies_Present(t *testing.T) {
 	})
 }
 
-func Test_All_Recipes_Missing_Common_Ingredient(t *testing.T) {
+func Test_Resolve_All_Recipes_Missing_Common_Ingredient(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -686,7 +686,7 @@ func Test_All_Recipes_Missing_Common_Ingredient(t *testing.T) {
 	}, simpledi.ErrDependencyNotFound)
 }
 
-func Test_Chain_Five_Levels_Complete(t *testing.T) {
+func Test_Resolve_Chain_Five_Levels_Complete(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -785,7 +785,7 @@ func Test_Chain_Five_Levels_Complete(t *testing.T) {
 	})
 }
 
-func Test_Two_Parallel_Independent_Chains(t *testing.T) {
+func Test_Resolve_Two_Parallel_Independent_Chains(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -867,7 +867,7 @@ func Test_Two_Parallel_Independent_Chains(t *testing.T) {
 	})
 }
 
-func Test_Recipe_Requires_Single_Ingredient_Only(t *testing.T) {
+func Test_Resolve_Recipe_Requires_Single_Ingredient_Only(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -898,7 +898,7 @@ func Test_Recipe_Requires_Single_Ingredient_Only(t *testing.T) {
 	})
 }
 
-func Test_Recipe_Requires_Many_Ingredients(t *testing.T) {
+func Test_Resolve_Recipe_Requires_Many_Ingredients(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -985,7 +985,7 @@ func Test_Recipe_Requires_Many_Ingredients(t *testing.T) {
 	})
 }
 
-func Test_Complex_Graph_Mixed_Dependencies(t *testing.T) {
+func Test_Resolve_Complex_Graph_Mixed_Dependencies(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -1084,7 +1084,7 @@ func Test_Complex_Graph_Mixed_Dependencies(t *testing.T) {
 	})
 }
 
-func Test_Circular_Dependency_Three_Recipes(t *testing.T) {
+func Test_Resolve_Circular_Dependency_Three_Recipes(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -1122,7 +1122,7 @@ func Test_Circular_Dependency_Three_Recipes(t *testing.T) {
 	}, simpledi.ErrDependencyCycle)
 }
 
-func Test_Recipe_Requires_Itself(t *testing.T) {
+func Test_Resolve_Recipe_Requires_Itself(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -1142,7 +1142,7 @@ func Test_Recipe_Requires_Itself(t *testing.T) {
 	}, simpledi.ErrDependencyCycle)
 }
 
-func Test_Recipe_Result_Already_In_Supplies(t *testing.T) {
+func Test_Resolve_Recipe_Result_Already_In_Supplies(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -1189,7 +1189,7 @@ func Test_Recipe_Result_Already_In_Supplies(t *testing.T) {
 	})
 }
 
-func Test_All_Recipe_Results_In_Supplies(t *testing.T) {
+func Test_Resolve_All_Recipe_Results_In_Supplies(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
@@ -1219,7 +1219,7 @@ func Test_All_Recipe_Results_In_Supplies(t *testing.T) {
 	})
 }
 
-func Test_Recipe_Missing_Last_Ingredient(t *testing.T) {
+func Test_Resolve_Recipe_Missing_Last_Ingredient(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -1251,7 +1251,7 @@ func Test_Recipe_Missing_Last_Ingredient(t *testing.T) {
 	}, simpledi.ErrDependencyNotFound)
 }
 
-func Test_Multiple_Chains_One_Complete_One_Broken(t *testing.T) {
+func Test_Resolve_Multiple_Chains_One_Complete_One_Broken(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -1294,7 +1294,7 @@ func Test_Multiple_Chains_One_Complete_One_Broken(t *testing.T) {
 	}, simpledi.ErrDependencyNotFound)
 }
 
-func Test_Wide_Dependency_Tree(t *testing.T) {
+func Test_Resolve_Wide_Dependency_Tree(t *testing.T) {
 	defer simpledi.Close()
 	order := make([]string, 0)
 
