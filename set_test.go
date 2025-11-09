@@ -6,7 +6,7 @@ import (
 	"github.com/eerzho/simpledi"
 )
 
-func Test_Err_Container_Resolved(t *testing.T) {
+func Test_Set_Err_Container_Resolved(t *testing.T) {
 	defer simpledi.Close()
 
 	assertNoPanic(t, func() {
@@ -23,7 +23,7 @@ func Test_Err_Container_Resolved(t *testing.T) {
 	}, simpledi.ErrContainerResolved)
 }
 
-func Test_Err_ID_Required(t *testing.T) {
+func Test_Set_Err_ID_Required(t *testing.T) {
 	defer simpledi.Close()
 
 	assertPanic(t, func() {
@@ -35,7 +35,7 @@ func Test_Err_ID_Required(t *testing.T) {
 	}, simpledi.ErrIDRequired)
 }
 
-func Test_Err_New_Required(t *testing.T) {
+func Test_Set_Err_New_Required(t *testing.T) {
 	defer simpledi.Close()
 
 	assertPanic(t, func() {
