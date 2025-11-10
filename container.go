@@ -1,4 +1,4 @@
-// Package simpledi provides a simple dependency injection container for Go.
+// A simple dependency injection container for Go.
 // Zero dependencies, no reflection, no code generation.
 package simpledi
 
