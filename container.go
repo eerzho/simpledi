@@ -17,14 +17,21 @@ var (
 	ErrTypeMismatch         = errors.New("Type mismatch")
 )
 
-type container struct {
+type Container struct {
 	resolved    bool
 	definitions []Definition
 	instances   map[string]any
 }
 
-func (c *container) set(d Definition) error {
-	const op = "simpledi.set"
+func New() *Container {
+	return &Container{
+		definitions: make([]Definition, 0),
+		instances:   make(map[string]any),
+	}
+}
+
+func (c *Container) Set(d Definition) error {
+	const op = "simpledi.Set"
 
 	if c.resolved {
 		return fmt.Errorf("%s: %w", op, ErrContainerResolved)
@@ -40,8 +47,8 @@ func (c *container) set(d Definition) error {
 	return nil
 }
 
-func (c *container) get(id string) (any, error) {
-	const op = "simpledi.get"
+func (c *Container) Get(id string) (any, error) {
+	const op = "simpledi.Get"
 
 	if id == "" {
 		return nil, fmt.Errorf("%s: %w", op, ErrIDRequired)
@@ -54,8 +61,8 @@ func (c *container) get(id string) (any, error) {
 	return instance, nil
 }
 
-func (c *container) resolve() error {
-	const op = "simpledi.resolve"
+func (c *Container) Resolve() error {
+	const op = "simpledi.Resolve"
 
 	if c.resolved {
 		return fmt.Errorf("%s: %w", op, ErrContainerResolved)
@@ -72,7 +79,7 @@ func (c *container) resolve() error {
 	return nil
 }
 
-func (c *container) sort() error {
+func (c *Container) sort() error {
 	const op = "simpledi.sort"
 
 	definitionsCount := len(c.definitions)
@@ -133,7 +140,7 @@ func (c *container) sort() error {
 	return nil
 }
 
-func (c *container) close() error {
+func (c *Container) close() error {
 	const op = "simpledi.close"
 
 	errs := make([]error, 0)

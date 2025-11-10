@@ -5,11 +5,8 @@ import (
 	"sync"
 )
 
-var ctr = sync.OnceValue(func() *container {
-	return &container{
-		definitions: make([]Definition, 0),
-		instances:   make(map[string]any),
-	}
+var container = sync.OnceValue(func() *Container {
+	return New()
 })
 
 type Definition struct {
@@ -20,16 +17,16 @@ type Definition struct {
 }
 
 func Set(d Definition) {
-	if err := ctr().set(d); err != nil {
+	if err := container().Set(d); err != nil {
 		panic(err)
 	}
 }
 
 func Get[T any](id string) T {
-	const op = "simpledi.get"
+	const op = "simpledi.Get"
 
 	var zero T
-	instance, err := ctr().get(id)
+	instance, err := container().Get(id)
 	if err != nil {
 		panic(err)
 	}
@@ -46,11 +43,11 @@ func Get[T any](id string) T {
 }
 
 func Resolve() {
-	if err := ctr().resolve(); err != nil {
+	if err := container().Resolve(); err != nil {
 		panic(err)
 	}
 }
 
 func Close() error {
-	return ctr().close()
+	return container().close()
 }
