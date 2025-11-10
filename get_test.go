@@ -181,3 +181,67 @@ func Test_Get_With_Nil_Value(t *testing.T) {
 		assertSameValue(t, nilVal, nil)
 	})
 }
+
+func Test_Get_From_New(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID:   "service_3",
+			Deps: []string{"service_1"},
+			New: func() any {
+				service1 := simpledi.Get[*testServiceImpl1]("service_1")
+				return &testServiceImpl3{service1: service1}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertNoPanic(t, func() {
+		service1 := simpledi.Get[*testServiceImpl1]("service_1")
+		service3 := simpledi.Get[*testServiceImpl3]("service_3")
+		assertSamePointer(t, service1, service3.service1)
+	})
+}
+
+func Test_Get_From_New_Err_ID_Not_Found(t *testing.T) {
+	defer simpledi.Close()
+
+	assertPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_3",
+			New: func() any {
+				simpledi.Get[*testServiceImpl1]("service_1")
+				return &testServiceImpl3{}
+			},
+		})
+		simpledi.Resolve()
+	}, simpledi.ErrIDNotFound)
+}
+
+func Test_Get_From_New_Err_Type_Mismatch(t *testing.T) {
+	defer simpledi.Close()
+
+	assertPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID: "service_3",
+			New: func() any {
+				_ = simpledi.Get[*testServiceImpl2]("service_1")
+				return &testServiceImpl3{}
+			},
+		})
+		simpledi.Resolve()
+	}, simpledi.ErrTypeMismatch)
+}
