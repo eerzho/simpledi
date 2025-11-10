@@ -1,10 +1,290 @@
 package simpledi_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/eerzho/simpledi"
 )
+
+func Test_Set_Err_Container_Resolved(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Resolve()
+	})
+
+	assertPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+	}, simpledi.ErrContainerResolved)
+}
+
+func Test_Set_Err_ID_Required(t *testing.T) {
+	defer simpledi.Close()
+
+	assertPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+	}, simpledi.ErrIDRequired)
+}
+
+func Test_Set_Err_New_Required(t *testing.T) {
+	defer simpledi.Close()
+
+	assertPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_2",
+		})
+	}, simpledi.ErrNewRequired)
+}
+
+func Test_Get_Err_ID_Required(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertPanic(t, func() {
+		_ = simpledi.Get[*testServiceImpl1]("")
+	}, simpledi.ErrIDRequired)
+}
+
+func Test_Get_Err_ID_NotFound(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertPanic(t, func() {
+		_ = simpledi.Get[*testServiceImpl1]("not_found")
+	}, simpledi.ErrIDNotFound)
+}
+
+func Test_Get_Err_Type_Mismatch(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID: "service_2",
+			New: func() any {
+				return &testServiceImpl2{}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertPanic(t, func() {
+		_ = simpledi.Get[*testServiceImpl2]("service_1")
+	}, simpledi.ErrTypeMismatch)
+}
+
+func Test_Get_Generic_Type_With_Interface(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertNoPanic(t, func() {
+		_ = simpledi.Get[testService1]("service_1")
+	})
+}
+
+func Test_Get_Returns_Same_Instance_Value(t *testing.T) {
+	defer simpledi.Close()
+	someData := "some data"
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_2",
+			New: func() any {
+				return &testServiceImpl2{data: someData}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertNoPanic(t, func() {
+		v1 := simpledi.Get[*testServiceImpl2]("service_2")
+		v2 := simpledi.Get[*testServiceImpl2]("service_2")
+		assertSameValue(t, v1.data, v2.data)
+	})
+}
+
+func Test_Get_Returns_Same_Instance_Pointer(t *testing.T) {
+	defer simpledi.Close()
+	someData := "someData"
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_2",
+			New: func() any {
+				return &testServiceImpl2{data: someData}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertNoPanic(t, func() {
+		v1 := simpledi.Get[*testServiceImpl2]("service_2")
+		v2 := simpledi.Get[*testServiceImpl2]("service_2")
+		assertSamePointer(t, v1, v2)
+	})
+}
+
+func Test_Get_Err_Before_Resolve(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+	})
+
+	assertPanic(t, func() {
+		_ = simpledi.Get[*testServiceImpl1]("service_1")
+	}, simpledi.ErrIDNotFound)
+}
+
+func Test_Get_With_Value_Type(t *testing.T) {
+	defer simpledi.Close()
+	someData := "some data"
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_2",
+			New: func() any {
+				return testServiceImpl2{data: someData}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertNoPanic(t, func() {
+		service2 := simpledi.Get[testServiceImpl2]("service_2")
+		assertSameValue(t, service2.data, someData)
+	})
+}
+
+func Test_Get_With_Nil_Value(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "nil_val",
+			New: func() any {
+				return nil
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertNoPanic(t, func() {
+		nilVal := simpledi.Get[any]("nil_val")
+		assertSameValue(t, nilVal, nil)
+	})
+}
+
+func Test_Get_From_New(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID:   "service_3",
+			Deps: []string{"service_1"},
+			New: func() any {
+				service1 := simpledi.Get[*testServiceImpl1]("service_1")
+				return &testServiceImpl3{service1: service1}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertNoPanic(t, func() {
+		service1 := simpledi.Get[*testServiceImpl1]("service_1")
+		service3 := simpledi.Get[*testServiceImpl3]("service_3")
+		assertSamePointer(t, service1, service3.service1)
+	})
+}
+
+func Test_Get_From_New_Err_ID_Not_Found(t *testing.T) {
+	defer simpledi.Close()
+
+	assertPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_3",
+			New: func() any {
+				simpledi.Get[*testServiceImpl1]("service_1")
+				return &testServiceImpl3{}
+			},
+		})
+		simpledi.Resolve()
+	}, simpledi.ErrIDNotFound)
+}
+
+func Test_Get_From_New_Err_Type_Mismatch(t *testing.T) {
+	defer simpledi.Close()
+
+	assertPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID: "service_3",
+			New: func() any {
+				_ = simpledi.Get[*testServiceImpl2]("service_1")
+				return &testServiceImpl3{}
+			},
+		})
+		simpledi.Resolve()
+	}, simpledi.ErrTypeMismatch)
+}
 
 func Test_Resolve_Single_Recipe_All_Ingredients_Available(t *testing.T) {
 	defer simpledi.Close()
@@ -1479,4 +1759,184 @@ func Test_Resolve_All_New_Functions_Invoked_Once(t *testing.T) {
 	})
 
 	assertSameValue(t, callCount, 1)
+}
+
+func Test_Close_Without_Close_Functions(t *testing.T) {
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "yeast",
+			New: func() any {
+				return "yeast"
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID: "flour",
+			New: func() any {
+				return "flour"
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID:   "bread",
+			Deps: []string{"yeast", "flour"},
+			New: func() any {
+				return "bread"
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertNoError(t, simpledi.Close)
+}
+
+func Test_Close_Error(t *testing.T) {
+	order := make([]string, 0)
+	someError1 := errors.New("some error 1")
+	someError2 := errors.New("some error 2")
+	someError3 := errors.New("some error 3")
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "yeast",
+			New: func() any {
+				return "yeast"
+			},
+			Close: func() error {
+				order = append(order, "yeast")
+				return someError1
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID: "flour",
+			New: func() any {
+				return "flour"
+			},
+			Close: func() error {
+				order = append(order, "flour")
+				return someError2
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID:   "bread",
+			Deps: []string{"yeast", "flour"},
+			New: func() any {
+				return "bread"
+			},
+			Close: func() error {
+				order = append(order, "bread")
+				return someError3
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertError(t, simpledi.Close, someError1, someError2, someError3)
+	assertOrder(t, order, []string{"bread", "flour", "yeast"})
+}
+
+func Test_Close_Multiple_Times(t *testing.T) {
+	someError := errors.New("some error")
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "yeast",
+			New: func() any {
+				return "yeast"
+			},
+			Close: func() error {
+				return someError
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertError(t, simpledi.Close, someError)
+	assertNoError(t, simpledi.Close)
+}
+
+type testService1 interface{ doSomething1() }
+type testServiceImpl1 struct{}
+
+func (t *testServiceImpl1) doSomething1() {}
+
+type testServiceImpl2 struct{ data string }
+
+type testServiceImpl3 struct{ service1 *testServiceImpl1 }
+
+func assertOrder[T comparable](t *testing.T, got, want []T) {
+	t.Helper()
+	gotCount, wantCount := len(got), len(want)
+	if len(got) != len(want) {
+		t.Errorf("got: %d count, want: %d count", gotCount, wantCount)
+		return
+	}
+	for i := 0; i < gotCount; i++ {
+		if got[i] != want[i] {
+			t.Errorf("[%d] got: %v, want: %v", i, got[i], want[i])
+			t.Errorf("got: %#v, want: %#v", got, want)
+			return
+		}
+	}
+}
+
+func assertSameValue[T comparable](t *testing.T, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Errorf("got: %v, want: %v", got, want)
+	}
+}
+
+func assertSamePointer[T comparable](t *testing.T, got, want *T) {
+	t.Helper()
+	if got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+}
+
+func assertError(t *testing.T, fn func() error, wants ...error) {
+	t.Helper()
+	err := fn()
+	for _, want := range wants {
+		if !errors.Is(err, want) {
+			t.Errorf("got: %v, want: %v", err, want)
+		}
+	}
+}
+
+func assertNoError(t *testing.T, fn func() error) {
+	t.Helper()
+	if err := fn(); err != nil {
+		t.Errorf("got: %v, want: no error", err)
+	}
+}
+
+func assertPanic(t *testing.T, fn func(), want error) {
+	t.Helper()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Errorf("got: no panic, want: panic(%v)", want)
+			return
+		}
+
+		err, ok := r.(error)
+		if !ok {
+			t.Errorf("got: %T, want: error", r)
+			return
+		}
+
+		if !errors.Is(err, want) {
+			t.Errorf("got: %v, want: %v", err, want)
+		}
+	}()
+	fn()
+}
+
+func assertNoPanic(t *testing.T, fn func()) {
+	t.Helper()
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("got: panic(%v), want: no panic", r)
+		}
+	}()
+	fn()
 }
