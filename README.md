@@ -7,6 +7,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/eerzho/simpledi?token=YOUR_TOKEN)](https://codecov.io/gh/eerzho/simpledi)
 
 A simple dependency injection container for Go.
+
 Zero dependencies, no reflection, no code generation.
 
 ## Install
@@ -67,5 +68,16 @@ func main() {
 
 ## Docs
 
-Full documentation and examples:
-[https://pkg.go.dev/github.com/eerzho/simpledi](https://pkg.go.dev/github.com/eerzho/simpledi)
+Full documentation and examples: [pkg.go.dev](https://pkg.go.dev/github.com/eerzho/simpledi#pkg-examples).
+
+## Current state
+
+`simpledi` provides the core features intended.
+
+Further improvements or new features may be introduced as good ideas come up.
+
+Suggestions and feedback are always welcome.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=eerzho/simpledi&type=Timeline)](https://www.star-history.com/#eerzho/simpledi&Timeline)
