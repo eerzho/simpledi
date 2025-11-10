@@ -1384,3 +1384,99 @@ func Test_Resolve_Wide_Dependency_Tree(t *testing.T) {
 		assertSameValue(t, simpledi.Get[string]("final"), "final")
 	})
 }
+
+func Test_Resolve_Err_Container_Resolved(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Resolve()
+	})
+
+	assertPanic(t, func() {
+		simpledi.Resolve()
+	}, simpledi.ErrContainerResolved)
+}
+
+func Test_Resolve_Err_ID_Duplicate(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+	})
+
+	assertPanic(t, func() {
+		simpledi.Resolve()
+	}, simpledi.ErrIDDuplicate)
+}
+
+func Test_Resolve_Err_Dependency_Not_Found(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID:   "service_1",
+			Deps: []string{"service_2"},
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+	})
+
+	assertPanic(t, func() {
+		simpledi.Resolve()
+	}, simpledi.ErrDependencyNotFound)
+}
+
+func Test_Resolve_Err_Dependency_Cycle(t *testing.T) {
+	defer simpledi.Close()
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID:   "service_1",
+			Deps: []string{"service_2"},
+			New: func() any {
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Set(simpledi.Definition{
+			ID:   "service_2",
+			Deps: []string{"service_1"},
+			New: func() any {
+				return &testServiceImpl2{}
+			},
+		})
+	})
+
+	assertPanic(t, func() {
+		simpledi.Resolve()
+	}, simpledi.ErrDependencyCycle)
+}
+
+func Test_Resolve_All_New_Functions_Invoked_Once(t *testing.T) {
+	defer simpledi.Close()
+	callCount := 0
+
+	assertNoPanic(t, func() {
+		simpledi.Set(simpledi.Definition{
+			ID: "service_1",
+			New: func() any {
+				callCount++
+				return &testServiceImpl1{}
+			},
+		})
+		simpledi.Resolve()
+	})
+
+	assertSameValue(t, callCount, 1)
+}
