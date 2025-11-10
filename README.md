@@ -27,33 +27,46 @@ type Database struct {
 	URL string
 }
 
-type UserService struct {
-	DB *Database
+func (d *Database) Close() error {
+	return errors.New("database close error")
+}
+
+type Service struct {
+	Database *Database
 }
 
 func main() {
+	// Close all definitions in reverse order at the end
 	defer simpledi.Close()
 
+	// Define database
 	simpledi.Set(simpledi.Definition{
-		ID: "database",
+		ID:   "database",
 		New: func() any {
-			return &Database{URL: "real_url"}
+			return &Database{URL: "postgres"}
+		},
+		Close: func() error {
+			database := simpledi.Get[*Database]("database")
+			return database.Close()
 		},
 	})
 
+	// Define service
 	simpledi.Set(simpledi.Definition{
-		ID:   "user_service",
+		ID:   "service",
 		Deps: []string{"database"},
 		New: func() any {
-			db := simpledi.Get[*Database]("database")
-			return &UserService{DB: db}
+			database := simpledi.Get[*Database]("database")
+			return &Service{Database: database}
 		},
 	})
 
+	// Resolve all dependencies in correct order
 	simpledi.Resolve()
 
-	userService := simpledi.Get[*UserService]("user_service")
-	_ = userService
+	// Use the service
+	service := simpledi.Get[*Service]("service")
+	_ = service
 }
 ```
 
@@ -63,8 +76,6 @@ func main() {
 * No reflection
 * Type-safe with generics
 * Automatic dependency ordering
-* Optional cleanup with `Close`
-* Global container with `Set`, `Get`, `Resolve`, `Close`
 
 ## Docs
 
