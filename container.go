@@ -17,6 +17,13 @@ var (
 	ErrTypeMismatch         = errors.New("Type mismatch")
 )
 
+type Definition struct {
+	ID    string
+	Deps  []string
+	New   func() any
+	Close func() error
+}
+
 type Container struct {
 	resolved    bool
 	definitions []Definition
@@ -79,6 +86,32 @@ func (c *Container) Resolve() error {
 	return nil
 }
 
+func (c *Container) Close() error {
+	const op = "simpledi.Close"
+
+	errs := make([]error, 0)
+	if c.resolved {
+		for i := len(c.definitions) - 1; i >= 0; i-- {
+			definition := c.definitions[i]
+			if definition.Close != nil {
+				if err := definition.Close(); err != nil {
+					errs = append(errs, fmt.Errorf("%s: %w (ID: %s)", op, err, definition.ID))
+				}
+			}
+		}
+	}
+
+	c.definitions = make([]Definition, 0)
+	c.instances = make(map[string]any)
+	c.resolved = false
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
+}
+
 func (c *Container) sort() error {
 	const op = "simpledi.sort"
 
@@ -136,32 +169,6 @@ func (c *Container) sort() error {
 	}
 
 	c.definitions = sortedDefinitions
-
-	return nil
-}
-
-func (c *Container) close() error {
-	const op = "simpledi.close"
-
-	errs := make([]error, 0)
-	if c.resolved {
-		for i := len(c.definitions) - 1; i >= 0; i-- {
-			definition := c.definitions[i]
-			if definition.Close != nil {
-				if err := definition.Close(); err != nil {
-					errs = append(errs, fmt.Errorf("%s: %w (ID: %s)", op, err, definition.ID))
-				}
-			}
-		}
-	}
-
-	c.definitions = make([]Definition, 0)
-	c.instances = make(map[string]any)
-	c.resolved = false
-
-	if len(errs) > 0 {
-		return errors.Join(errs...)
-	}
 
 	return nil
 }

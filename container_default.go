@@ -9,13 +9,6 @@ var container = sync.OnceValue(func() *Container {
 	return New()
 })
 
-type Definition struct {
-	ID    string
-	Deps  []string
-	New   func() any
-	Close func() error
-}
-
 func Set(d Definition) {
 	if err := container().Set(d); err != nil {
 		panic(err)
@@ -49,5 +42,5 @@ func Resolve() {
 }
 
 func Close() error {
-	return container().close()
+	return container().Close()
 }
