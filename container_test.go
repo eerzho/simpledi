@@ -18,7 +18,7 @@ func Test_Set_Err_Container_Resolved(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 	}, simpledi.ErrContainerResolved)
@@ -30,7 +30,7 @@ func Test_Set_Err_ID_Required(t *testing.T) {
 	assertPanic(t, func() {
 		simpledi.Set(simpledi.Definition{
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 	}, simpledi.ErrIDRequired)
@@ -53,14 +53,14 @@ func Test_Get_Err_ID_Required(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Resolve()
 	})
 
 	assertPanic(t, func() {
-		_ = simpledi.Get[*testServiceImpl1]("")
+		_ = simpledi.Get[*ServiceImplA]("")
 	}, simpledi.ErrIDRequired)
 }
 
@@ -71,14 +71,14 @@ func Test_Get_Err_ID_NotFound(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Resolve()
 	})
 
 	assertPanic(t, func() {
-		_ = simpledi.Get[*testServiceImpl1]("not_found")
+		_ = simpledi.Get[*ServiceImplA]("not_found")
 	}, simpledi.ErrIDNotFound)
 }
 
@@ -89,20 +89,20 @@ func Test_Get_Err_Type_Mismatch(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Set(simpledi.Definition{
 			ID: "service_2",
 			New: func() any {
-				return &testServiceImpl2{}
+				return &ServiceImplB{}
 			},
 		})
 		simpledi.Resolve()
 	})
 
 	assertPanic(t, func() {
-		_ = simpledi.Get[*testServiceImpl2]("service_1")
+		_ = simpledi.Get[*ServiceImplB]("service_1")
 	}, simpledi.ErrTypeMismatch)
 }
 
@@ -113,14 +113,14 @@ func Test_Get_Generic_Type_With_Interface(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Resolve()
 	})
 
 	assertNoPanic(t, func() {
-		_ = simpledi.Get[testService1]("service_1")
+		_ = simpledi.Get[ServiceA]("service_1")
 	})
 }
 
@@ -132,15 +132,15 @@ func Test_Get_Returns_Same_Instance_Value(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_2",
 			New: func() any {
-				return &testServiceImpl2{data: someData}
+				return &ServiceImplB{data: someData}
 			},
 		})
 		simpledi.Resolve()
 	})
 
 	assertNoPanic(t, func() {
-		v1 := simpledi.Get[*testServiceImpl2]("service_2")
-		v2 := simpledi.Get[*testServiceImpl2]("service_2")
+		v1 := simpledi.Get[*ServiceImplB]("service_2")
+		v2 := simpledi.Get[*ServiceImplB]("service_2")
 		assertSameValue(t, v1.data, v2.data)
 	})
 }
@@ -153,15 +153,15 @@ func Test_Get_Returns_Same_Instance_Pointer(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_2",
 			New: func() any {
-				return &testServiceImpl2{data: someData}
+				return &ServiceImplB{data: someData}
 			},
 		})
 		simpledi.Resolve()
 	})
 
 	assertNoPanic(t, func() {
-		v1 := simpledi.Get[*testServiceImpl2]("service_2")
-		v2 := simpledi.Get[*testServiceImpl2]("service_2")
+		v1 := simpledi.Get[*ServiceImplB]("service_2")
+		v2 := simpledi.Get[*ServiceImplB]("service_2")
 		assertSamePointer(t, v1, v2)
 	})
 }
@@ -173,13 +173,13 @@ func Test_Get_Err_Before_Resolve(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 	})
 
 	assertPanic(t, func() {
-		_ = simpledi.Get[*testServiceImpl1]("service_1")
+		_ = simpledi.Get[*ServiceImplA]("service_1")
 	}, simpledi.ErrIDNotFound)
 }
 
@@ -191,14 +191,14 @@ func Test_Get_With_Value_Type(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_2",
 			New: func() any {
-				return testServiceImpl2{data: someData}
+				return ServiceImplB{data: someData}
 			},
 		})
 		simpledi.Resolve()
 	})
 
 	assertNoPanic(t, func() {
-		service2 := simpledi.Get[testServiceImpl2]("service_2")
+		service2 := simpledi.Get[ServiceImplB]("service_2")
 		assertSameValue(t, service2.data, someData)
 	})
 }
@@ -229,24 +229,24 @@ func Test_Get_From_New(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Set(simpledi.Definition{
 			ID:   "service_3",
 			Deps: []string{"service_1"},
 			New: func() any {
-				service1 := simpledi.Get[*testServiceImpl1]("service_1")
-				return &testServiceImpl3{service1: service1}
+				ServiceA := simpledi.Get[*ServiceImplA]("service_1")
+				return &ServiceImplC{ServiceA: ServiceA}
 			},
 		})
 		simpledi.Resolve()
 	})
 
 	assertNoPanic(t, func() {
-		service1 := simpledi.Get[*testServiceImpl1]("service_1")
-		service3 := simpledi.Get[*testServiceImpl3]("service_3")
-		assertSamePointer(t, service1, service3.service1)
+		ServiceA := simpledi.Get[*ServiceImplA]("service_1")
+		service3 := simpledi.Get[*ServiceImplC]("service_3")
+		assertSamePointer(t, ServiceA, service3.ServiceA)
 	})
 }
 
@@ -257,8 +257,8 @@ func Test_Get_From_New_Err_ID_Not_Found(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_3",
 			New: func() any {
-				simpledi.Get[*testServiceImpl1]("service_1")
-				return &testServiceImpl3{}
+				simpledi.Get[*ServiceImplA]("service_1")
+				return &ServiceImplC{}
 			},
 		})
 		simpledi.Resolve()
@@ -272,14 +272,14 @@ func Test_Get_From_New_Err_Type_Mismatch(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Set(simpledi.Definition{
 			ID: "service_3",
 			New: func() any {
-				_ = simpledi.Get[*testServiceImpl2]("service_1")
-				return &testServiceImpl3{}
+				_ = simpledi.Get[*ServiceImplB]("service_1")
+				return &ServiceImplC{}
 			},
 		})
 		simpledi.Resolve()
@@ -1684,13 +1684,13 @@ func Test_Resolve_Err_ID_Duplicate(t *testing.T) {
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Set(simpledi.Definition{
 			ID: "service_1",
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 	})
@@ -1708,7 +1708,7 @@ func Test_Resolve_Err_Dependency_Not_Found(t *testing.T) {
 			ID:   "service_1",
 			Deps: []string{"service_2"},
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 	})
@@ -1726,14 +1726,14 @@ func Test_Resolve_Err_Dependency_Cycle(t *testing.T) {
 			ID:   "service_1",
 			Deps: []string{"service_2"},
 			New: func() any {
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Set(simpledi.Definition{
 			ID:   "service_2",
 			Deps: []string{"service_1"},
 			New: func() any {
-				return &testServiceImpl2{}
+				return &ServiceImplB{}
 			},
 		})
 	})
@@ -1752,7 +1752,7 @@ func Test_Resolve_All_New_Functions_Invoked_Once(t *testing.T) {
 			ID: "service_1",
 			New: func() any {
 				callCount++
-				return &testServiceImpl1{}
+				return &ServiceImplA{}
 			},
 		})
 		simpledi.Resolve()
@@ -1853,14 +1853,14 @@ func Test_Close_Multiple_Times(t *testing.T) {
 	assertNoError(t, simpledi.Close)
 }
 
-type testService1 interface{ doSomething1() }
-type testServiceImpl1 struct{}
+type ServiceA interface{ DoWork() }
+type ServiceImplA struct{}
 
-func (t *testServiceImpl1) doSomething1() {}
+func (t *ServiceImplA) DoWork() {}
 
-type testServiceImpl2 struct{ data string }
+type ServiceImplB struct{ data string }
 
-type testServiceImpl3 struct{ service1 *testServiceImpl1 }
+type ServiceImplC struct{ ServiceA *ServiceImplA }
 
 func assertOrder[T comparable](t *testing.T, got, want []T) {
 	t.Helper()
