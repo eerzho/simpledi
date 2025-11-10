@@ -1,3 +1,5 @@
+// Package simpledi provides a simple dependency injection container for Go.
+// Zero dependencies, no reflection, no code generation.
 package simpledi
 
 import (
@@ -6,30 +8,59 @@ import (
 )
 
 var (
-	ErrContainerResolved    = errors.New("Container resolved")
-	ErrIDRequired           = errors.New("ID required")
-	ErrNewRequired          = errors.New("New required")
+	// ErrContainerResolved indicates that the operation was called
+	// after the container has already been resolved.
+	ErrContainerResolved = errors.New("Container resolved")
+
+	// ErrIDRequired indicates that a definition has no ID.
+	ErrIDRequired = errors.New("ID required")
+
+	// ErrNewRequired indicates that a definition has no constructor function.
+	ErrNewRequired = errors.New("New required")
+
+	// ErrContainerNotResolved indicates that an operation requires
+	// a resolved container, but the container is not yet resolved.
 	ErrContainerNotResolved = errors.New("Container not resolved")
-	ErrIDNotFound           = errors.New("ID not found")
-	ErrIDDuplicate          = errors.New("ID duplicate")
-	ErrDependencyNotFound   = errors.New("Dependency not found")
-	ErrDependencyCycle      = errors.New("Dependency cycle detected")
-	ErrTypeMismatch         = errors.New("Type mismatch")
+
+	// ErrIDNotFound indicates that no instance with the given ID exists.
+	ErrIDNotFound = errors.New("ID not found")
+
+	// ErrIDDuplicate indicates that a definition with the same ID already exists.
+	ErrIDDuplicate = errors.New("ID duplicate")
+
+	// ErrDependencyNotFound indicates that a dependency in Deps is not defined.
+	ErrDependencyNotFound = errors.New("Dependency not found")
+
+	// ErrDependencyCycle indicates that a circular dependency was detected.
+	ErrDependencyCycle = errors.New("Dependency cycle detected")
+
+	// ErrTypeMismatch indicates that a requested instance type does not match.
+	ErrTypeMismatch = errors.New("Type mismatch")
 )
 
+// Definition describes a dependency definition.
 type Definition struct {
-	ID    string
-	Deps  []string
-	New   func() any
+	// ID is the unique identifier of the definition. Required.
+	ID string
+	// Deps is the list of dependency IDs. Optional.
+	Deps []string
+	// New is the function that returns a new instance. Required.
+	New func() any
+	// Close is the function called on container close. Optional.
 	Close func() error
 }
 
+// Container is a simple dependency injection container.
+//
+// A container stores definitions, resolves their dependencies,
+// creates instances, and manages cleanup.
 type Container struct {
 	resolved    bool
 	definitions []Definition
 	instances   map[string]any
 }
 
+// New returns a new Container.
 func New() *Container {
 	return &Container{
 		definitions: make([]Definition, 0),
@@ -37,6 +68,7 @@ func New() *Container {
 	}
 }
 
+// Set adds a definition to the container.
 func (c *Container) Set(d Definition) error {
 	const op = "simpledi.Set"
 
@@ -54,6 +86,7 @@ func (c *Container) Set(d Definition) error {
 	return nil
 }
 
+// Get returns an instance by ID.
 func (c *Container) Get(id string) (any, error) {
 	const op = "simpledi.Get"
 
@@ -68,6 +101,8 @@ func (c *Container) Get(id string) (any, error) {
 	return instance, nil
 }
 
+// Resolve creates instances for all registered definitions.
+// Dependencies are resolved in topological order based on Deps.
 func (c *Container) Resolve() error {
 	const op = "simpledi.Resolve"
 
@@ -86,6 +121,9 @@ func (c *Container) Resolve() error {
 	return nil
 }
 
+// Close calls Close for all definitions that provide it, in reverse order.
+// Returns a combined error if any Close calls fail.
+// The container is then cleared and can be reused.
 func (c *Container) Close() error {
 	const op = "simpledi.Close"
 
