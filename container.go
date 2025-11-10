@@ -63,8 +63,7 @@ type Container struct {
 // New returns a new Container.
 func New() *Container {
 	return &Container{
-		definitions: make([]Definition, 0),
-		instances:   make(map[string]any),
+		instances: make(map[string]any),
 	}
 }
 
