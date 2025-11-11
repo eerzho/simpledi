@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/eerzho/simpledi?sort=semver)](https://github.com/eerzho/simpledi/releases/latest)
 [![License](https://img.shields.io/github/license/eerzho/simpledi)](https://github.com/eerzho/simpledi/blob/main/LICENSE)
-[![Go Reference](https://pkg.go.dev/badge/github.com/eerzho/simpledi.svg)](https://pkg.go.dev/github.com/eerzho/simpledi@latest)
+[![Go Reference](https://pkg.go.dev/badge/github.com/eerzho/simpledi.svg)](https://pkg.go.dev/github.com/eerzho/simpledi)
 [![Go Report](https://goreportcard.com/badge/github.com/eerzho/simpledi)](https://goreportcard.com/report/github.com/eerzho/simpledi)
 [![Codecov](https://img.shields.io/codecov/c/github/eerzho/simpledi?token=YOUR_TOKEN)](https://codecov.io/gh/eerzho/simpledi)
 

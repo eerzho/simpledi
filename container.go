@@ -1,4 +1,5 @@
 // A simple dependency injection container for Go.
+//
 // Zero dependencies, no reflection, no code generation.
 package simpledi
 
@@ -8,8 +9,7 @@ import (
 )
 
 var (
-	// ErrContainerResolved indicates that the operation was called
-	// after the container has already been resolved.
+	// ErrContainerResolved indicates that the operation was called after the container has already been resolved.
 	ErrContainerResolved = errors.New("Container resolved")
 
 	// ErrIDRequired indicates that a definition has no ID.
@@ -18,8 +18,7 @@ var (
 	// ErrNewRequired indicates that a definition has no constructor function.
 	ErrNewRequired = errors.New("New required")
 
-	// ErrContainerNotResolved indicates that an operation requires
-	// a resolved container, but the container is not yet resolved.
+	// ErrContainerNotResolved indicates that an operation requires a resolved container, but the container is not yet resolved.
 	ErrContainerNotResolved = errors.New("Container not resolved")
 
 	// ErrIDNotFound indicates that no instance with the given ID exists.
