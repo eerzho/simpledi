@@ -1,89 +1,53 @@
 package simpledi
 
 import (
+	"fmt"
 	"sync"
 )
 
-var (
-	c    *Container
-	once sync.Once
-)
+var container = sync.OnceValue(func() *Container {
+	return New()
+})
 
-// Register registers a dependency.
-//   - def: this is a dependency description
-func Register(def Def) error {
-	return defaultC().Register(def)
+// Set adds a definition to the container.
+func Set(d Definition) {
+	if err := container().Set(d); err != nil {
+		panic(err)
+	}
 }
 
-// MustRegister registers a dependency or panics on error.
-//   - def: this is a dependency description
-func MustRegister(def Def) {
-	defaultC().MustRegister(def)
-}
+// Get returns an instance by ID.
+func Get[T any](id string) T {
+	const op = "simpledi.Get"
 
-// Get gets dependency.
-//   - key: this is a unique name for the dependency
-func Get(key string) (any, error) {
-	return defaultC().Get(key)
-}
-
-// GetAs gets dependency as type T.
-//   - key: this is a unique name for the dependency
-func GetAs[T any](key string) (T, error) {
 	var zero T
-
-	object, err := Get(key)
-	if err != nil {
-		return zero, err
-	}
-
-	typed, ok := object.(T)
-	if !ok {
-		return zero, errWrongType(key, zero, object)
-	}
-
-	return typed, nil
-}
-
-// MustGet gets dependency or panics on error.
-//   - key: this is a unique name for the dependency
-func MustGet(key string) any {
-	return defaultC().MustGet(key)
-}
-
-// MustGetAs gets dependency as type T or panics on error.
-//   - key: this is a unique name for the dependency
-func MustGetAs[T any](key string) T {
-	object, err := GetAs[T](key)
+	instance, err := container().Get(id)
 	if err != nil {
 		panic(err)
 	}
-	return object
+	if instance == nil {
+		return zero
+	}
+	typedInstance, ok := instance.(T)
+	if !ok {
+		err := fmt.Errorf("%s: %w (ID: %s, Want: %T, Got: %T)", op, ErrTypeMismatch, id, zero, instance)
+		panic(err)
+	}
+
+	return typedInstance
 }
 
-// Resolve resolves all dependencies.
-func Resolve() error {
-	return defaultC().Resolve()
+// Resolve creates instances for all registered definitions.
+// Dependencies are resolved in topological order based on Deps.
+func Resolve() {
+	if err := container().Resolve(); err != nil {
+		panic(err)
+	}
 }
 
-// MustResolve resolves all dependencies or panics on error.
-func MustResolve() {
-	defaultC().MustResolve()
-}
-
-// Reset resets the container.
-func Reset() error {
-	return defaultC().Reset()
-}
-
-// MustReset resets the container or panics on error.
-func MustReset() {
-	defaultC().MustReset()
-}
-
-func defaultC() *Container {
-	once.Do(func() {
-		c = NewContainer()
-	})
-	return c
+// Close calls Close for all definitions that provide it, in reverse order.
+// Returns a combined error if any Close calls fail.
+// The container is then cleared and can be reused.
+func Close() error {
+	return container().Close()
 }

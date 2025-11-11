@@ -7,225 +7,88 @@ import (
 	"github.com/eerzho/simpledi"
 )
 
-func BenchmarkRegister(b *testing.B) {
-	type TestStruct struct {
-		value string
-	}
-
-	b.ReportAllocs()
+func Benchmark(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		c := simpledi.NewContainer()
-
-		b.StartTimer()
-		c.MustRegister(simpledi.Def{
-			Key: "test",
-			Ctor: func() any {
-				return &TestStruct{value: "test"}
-			},
-		})
-		b.StopTimer()
-	}
-}
-
-func BenchmarkResolve(b *testing.B) {
-	type TestStruct struct {
-		value string
-	}
-
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Def{
-			Key: "test",
-			Ctor: func() any {
-				return &TestStruct{value: "test"}
-			},
-		})
-
-		b.StartTimer()
-		c.MustResolve()
-		b.StopTimer()
-	}
-}
-
-func BenchmarkGet(b *testing.B) {
-	type TestStruct struct {
-		value string
-	}
-
-	c := simpledi.NewContainer()
-	c.MustRegister(simpledi.Def{
-		Key: "test",
-		Ctor: func() any {
-			return &TestStruct{value: "test"}
-		},
-	})
-	c.MustResolve()
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = c.MustGet("test")
-	}
-}
-
-func BenchmarkReset(b *testing.B) {
-	type TestStruct struct {
-		value string
-	}
-
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Def{
-			Key: "test",
-			Ctor: func() any {
-				return &TestStruct{value: "test"}
-			},
-			Dtor: func() error {
-				return fmt.Errorf("some error")
-			},
-		})
-		c.MustResolve()
-
-		b.StartTimer()
-		_ = c.Reset()
-		b.StopTimer()
-	}
-}
-
-func BenchmarkFullPipeline(b *testing.B) {
-	type TestStruct struct {
-		value string
-	}
-
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		c := simpledi.NewContainer()
-		c.MustRegister(simpledi.Def{
-			Key: "test",
-			Ctor: func() any {
-				return &TestStruct{value: "test"}
-			},
-		})
-		c.MustResolve()
-		_ = c.MustGet("test")
-		c.MustReset()
-	}
-}
-
-func BenchmarkFullPipelineWith10Dependencies(b *testing.B) {
-	type TestStruct struct {
-		value string
-	}
-
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		c := simpledi.NewContainer()
-
 		for j := 0; j < 10; j++ {
-			key := fmt.Sprintf("test-%d", j)
-			c.MustRegister(simpledi.Def{
-				Key: key,
-				Ctor: func() any {
-					return &TestStruct{value: key}
+			id := fmt.Sprintf("base_%d", j)
+			simpledi.Set(simpledi.Definition{
+				ID: id,
+				New: func() any {
+					return fmt.Sprintf("instance_%s", id)
 				},
 			})
 		}
 
-		c.MustResolve()
-
-		for j := 0; j < 10; j++ {
-			key := fmt.Sprintf("test-%d", j)
-			_ = c.MustGet(key)
-		}
-
-		c.MustReset()
-	}
-}
-
-func BenchmarkFullPipelineWith100Dependencies(b *testing.B) {
-	type TestStruct struct {
-		value string
-	}
-
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		c := simpledi.NewContainer()
-
-		for j := 0; j < 100; j++ {
-			key := fmt.Sprintf("test-%d", j)
-			c.MustRegister(simpledi.Def{
-				Key: key,
-				Ctor: func() any {
-					return &TestStruct{value: key}
+		for j := 0; j < 15; j++ {
+			id := fmt.Sprintf("level1_%d", j)
+			dep1 := fmt.Sprintf("base_%d", j%10)
+			dep2 := fmt.Sprintf("base_%d", (j+1)%10)
+			simpledi.Set(simpledi.Definition{
+				ID:   id,
+				Deps: []string{dep1, dep2},
+				New: func() any {
+					return fmt.Sprintf("instance_%s", id)
 				},
 			})
 		}
 
-		c.MustResolve()
-
-		for j := 0; j < 100; j++ {
-			key := fmt.Sprintf("test-%d", j)
-			_ = c.MustGet(key)
+		for j := 0; j < 20; j++ {
+			id := fmt.Sprintf("level2_%d", j)
+			dep1 := fmt.Sprintf("level1_%d", j%15)
+			dep2 := fmt.Sprintf("level1_%d", (j+1)%15)
+			dep3 := fmt.Sprintf("level1_%d", (j+2)%15)
+			simpledi.Set(simpledi.Definition{
+				ID:   id,
+				Deps: []string{dep1, dep2, dep3},
+				New: func() any {
+					return fmt.Sprintf("instance_%s", id)
+				},
+			})
 		}
 
-		c.MustReset()
-	}
-}
+		for j := 0; j < 15; j++ {
+			id := fmt.Sprintf("level3_%d", j)
+			dep1 := fmt.Sprintf("level2_%d", j%20)
+			dep2 := fmt.Sprintf("level2_%d", (j+1)%20)
+			dep3 := fmt.Sprintf("level2_%d", (j+2)%20)
+			dep4 := fmt.Sprintf("level2_%d", (j+3)%20)
+			simpledi.Set(simpledi.Definition{
+				ID:   id,
+				Deps: []string{dep1, dep2, dep3, dep4},
+				New: func() any {
+					return fmt.Sprintf("instance_%s", id)
+				},
+			})
+		}
 
-func BenchmarkFullPipelineWithDependencyChain(b *testing.B) {
-	type TestStruct struct {
-		value string
-	}
+		for j := 0; j < 10; j++ {
+			id := fmt.Sprintf("level4_%d", j)
+			dep1 := fmt.Sprintf("level3_%d", j%15)
+			dep2 := fmt.Sprintf("level3_%d", (j+1)%15)
+			dep3 := fmt.Sprintf("level3_%d", (j+2)%15)
+			simpledi.Set(simpledi.Definition{
+				ID:   id,
+				Deps: []string{dep1, dep2, dep3},
+				New: func() any {
+					return fmt.Sprintf("instance_%s", id)
+				},
+			})
+		}
 
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		c := simpledi.NewContainer()
+		for j := 0; j < 5; j++ {
+			id := fmt.Sprintf("final_%d", j)
+			dep1 := fmt.Sprintf("level4_%d", j%10)
+			dep2 := fmt.Sprintf("level4_%d", (j+1)%10)
+			simpledi.Set(simpledi.Definition{
+				ID:   id,
+				Deps: []string{dep1, dep2},
+				New: func() any {
+					return fmt.Sprintf("instance_%s", id)
+				},
+			})
+		}
 
-		c.MustRegister(simpledi.Def{
-			Key: "a",
-			Ctor: func() any {
-				return &TestStruct{value: "a"}
-			},
-		})
-		c.MustRegister(simpledi.Def{
-			Key:  "b",
-			Deps: []string{"a"},
-			Ctor: func() any {
-				return &TestStruct{value: "b"}
-			},
-		})
-		c.MustRegister(simpledi.Def{
-			Key:  "c",
-			Deps: []string{"b"},
-			Ctor: func() any {
-				return &TestStruct{value: "c"}
-			},
-		})
-		c.MustRegister(simpledi.Def{
-			Key:  "d",
-			Deps: []string{"c"},
-			Ctor: func() any {
-				return &TestStruct{value: "d"}
-			},
-		})
-		c.MustRegister(simpledi.Def{
-			Key:  "e",
-			Deps: []string{"d"},
-			Ctor: func() any {
-				return &TestStruct{value: "e"}
-			},
-		})
-
-		c.MustResolve()
-
-		_ = c.MustGet("a")
-		_ = c.MustGet("b")
-		_ = c.MustGet("c")
-		_ = c.MustGet("d")
-		_ = c.MustGet("e")
-
-		c.MustReset()
+		simpledi.Resolve()
+		simpledi.Close()
 	}
 }
